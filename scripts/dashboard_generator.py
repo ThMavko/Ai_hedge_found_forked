@@ -64,9 +64,16 @@ def _compute_metrics(history: list) -> dict:
     return history_metrics(history)
 
 
+# Colori dei grafici: allineati ai token CSS della pagina (stesso pannello, nessun "riquadro nel riquadro")
+CHART_BG = "#131c31"
+CHART_TEXT = "#8a99b3"
+CHART_TITLE = "#e6ebf4"
+CHART_GRID = "#26324a"
+
+
 def _fig_to_b64(fig) -> str:
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight", facecolor="#0f172a")
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=CHART_BG)
     buf.seek(0)
     data = base64.b64encode(buf.read()).decode()
     plt.close(fig)
@@ -75,13 +82,27 @@ def _fig_to_b64(fig) -> str:
 
 def _dark_ax(ax):
     """Apply dark theme to a matplotlib axes."""
-    ax.set_facecolor("#1e293b")
-    ax.tick_params(colors="#94a3b8")
-    ax.spines["bottom"].set_color("#334155")
-    ax.spines["left"].set_color("#334155")
+    ax.set_facecolor(CHART_BG)
+    ax.tick_params(colors=CHART_TEXT, labelsize=8, length=3, width=0.8)
+    for side in ("bottom", "left"):
+        ax.spines[side].set_color(CHART_GRID)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(True, alpha=0.15, color="#334155")
+    ax.grid(True, alpha=0.5, color=CHART_GRID, linewidth=0.6, linestyle=(0, (3, 4)))
+    ax.set_axisbelow(True)
+    ax.yaxis.set_major_formatter(lambda v, _pos: f"{v:,.0f}")
+
+
+def _style_title(ax, text):
+    ax.set_title(text, color=CHART_TITLE, fontsize=11, fontweight="bold",
+                 loc="left", pad=12)
+
+
+def _style_legend(ax, ncol=1):
+    legend = ax.legend(loc="upper left", fontsize=8, frameon=False,
+                       labelcolor="#cbd5e1", ncol=ncol, handlelength=1.6,
+                       borderaxespad=0.2)
+    return legend
 
 
 # ---------------------------------------------------------------------------
@@ -107,22 +128,19 @@ def _generate_equity_comparison_chart(portfolios: dict) -> str:
         if timestamps:
             color = STRATEGY_COLORS.get(sname, "#94a3b8")
             label = STRATEGY_LABELS.get(sname, sname)
-            ax.plot(timestamps, values, color=color, linewidth=2, label=label)
+            ax.plot(timestamps, values, color=color, linewidth=1.6, label=label)
             has_data = True
 
     if not has_data:
         ax.text(0.5, 0.5, "No data yet — in attesa della prima sessione di trading",
-                ha="center", va="center", transform=ax.transAxes, color="#94a3b8")
+                ha="center", va="center", transform=ax.transAxes, color=CHART_TEXT)
 
-    ax.set_title("Strategy Performance Comparison", color="#f8fafc", fontweight="bold")
-    ax.set_ylabel("EUR", color="#94a3b8")
+    _style_title(ax, "Strategy Performance Comparison")
+    ax.set_ylabel("EUR", color=CHART_TEXT, fontsize=8)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
     if has_data:
-        legend = ax.legend(loc="upper left", fontsize=9, fancybox=False,
-                           framealpha=0.3, labelcolor="#e2e8f0")
-        legend.get_frame().set_facecolor("#1e293b")
-        legend.get_frame().set_edgecolor("#334155")
-    fig.patch.set_facecolor("#0f172a")
+        _style_legend(ax, ncol=4)
+    fig.patch.set_facecolor(CHART_BG)
     _dark_ax(ax)
     return _fig_to_b64(fig)
 
@@ -144,20 +162,14 @@ def _generate_single_equity_chart(portfolio: dict, strategy_name: str) -> str:
             except (ValueError, KeyError):
                 continue
         if ts:
-            ax.plot(ts, vals, color=color, linewidth=2, label="Portfolio")
+            ax.plot(ts, vals, color=color, linewidth=1.6, label="Portfolio")
             ax.fill_between(ts, vals, alpha=0.1, color=color)
             ax.plot(ts, cash_vals, color="#64748b", linewidth=1, linestyle="--", label="Cash")
             ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
-    ax.set_title(
-        f"Equity Curve — {STRATEGY_LABELS.get(strategy_name, strategy_name)}",
-        color="#f8fafc", fontweight="bold"
-    )
-    ax.set_ylabel("EUR", color="#94a3b8")
-    legend = ax.legend(loc="upper left", fontsize=8, fancybox=False,
-                       framealpha=0.3, labelcolor="#e2e8f0")
-    legend.get_frame().set_facecolor("#1e293b")
-    legend.get_frame().set_edgecolor("#334155")
-    fig.patch.set_facecolor("#0f172a")
+    _style_title(ax, f"Equity Curve — {STRATEGY_LABELS.get(strategy_name, strategy_name)}")
+    ax.set_ylabel("EUR", color=CHART_TEXT, fontsize=8)
+    _style_legend(ax, ncol=2)
+    fig.patch.set_facecolor(CHART_BG)
     _dark_ax(ax)
     return _fig_to_b64(fig)
 
@@ -191,7 +203,7 @@ def _build_strategy_cards(portfolios: dict) -> str:
         daily_cls = "pos" if daily_chg >= 0 else "neg"
 
         cards += f"""
-        <div class="strategy-card" style="border-top:3px solid {color};">
+        <div class="strategy-card" style="--c:{color};border-top:3px solid {color};">
           <div class="strat-name">{label}</div>
           <div class="strat-value">{total:.2f} EUR</div>
           <div class="strat-return {badge_cls}">{sign}{ret_pct:.2f}%</div>
@@ -205,7 +217,7 @@ def _build_screener_table(signals: dict) -> str:
     try:
         from config import UNIVERSE
     except ImportError:
-        return "<p style='color:#94a3b8'>Screener unavailable (config not found)</p>"
+        return '<p class="empty">Screener unavailable (config not found)</p>'
 
     sentiment_data = signals.get("sentiment", {})
     fundamentals_data = signals.get("fundamentals", {})
@@ -254,27 +266,27 @@ def _build_screener_table(signals: dict) -> str:
     for r in rows_data:
         ret_cls = "pos" if r["ret_3m"] >= 0 else "neg"
         comp_pct = int(r["composite"] * 100)
-        comp_bar = f'<div style="background:#334155;border-radius:3px;height:6px;width:80px;display:inline-block;vertical-align:middle;"><div style="background:#22c55e;height:6px;border-radius:3px;width:{comp_pct}%;"></div></div>'
+        comp_bar = f'<span class="bar bar-lg"><i class="bar-comp" style="width:{comp_pct}%"></i></span>'
         fscore_pct = int(r["f_score"] * 100)
-        fscore_bar = f'<div style="background:#334155;border-radius:3px;height:6px;width:60px;display:inline-block;vertical-align:middle;"><div style="background:#f59e0b;height:6px;border-radius:3px;width:{fscore_pct}%;"></div></div>'
+        fscore_bar = f'<span class="bar"><i class="bar-fscore" style="width:{fscore_pct}%"></i></span>'
         ret_sign = "+" if r["ret_3m"] >= 0 else ""
         sent_sign = "+" if r["sent_score"] >= 0 else ""
         rows_html += f"""<tr>
           <td><strong>{r['ticker']}</strong></td>
           <td>{r['exchange']}</td>
           <td>{r['sector']}</td>
-          <td class="{ret_cls}">{ret_sign}{r['ret_3m']*100:.1f}%</td>
+          <td class="{ret_cls} num">{ret_sign}{r['ret_3m']*100:.1f}%</td>
           <td>{fscore_bar} {r['f_score']:.2f}</td>
           <td class="{r['sent_cls']}">{sent_sign}{r['sent_score']:.3f} <small>{r['sent_label']}</small></td>
           <td>{comp_bar} {r['composite']:.3f}</td>
         </tr>"""
 
     return f"""
-    <div style="overflow-x:auto;">
+    <div class="table-scroll">
     <table>
       <thead><tr>
         <th>Ticker</th><th>Exchange</th><th>Sector</th>
-        <th>Mom 3m</th><th>F-Score</th><th>Sentiment</th><th>Composite</th>
+        <th class="num">Mom 3m</th><th>F-Score</th><th>Sentiment</th><th>Composite</th>
       </tr></thead>
       <tbody>{rows_html}</tbody>
     </table>
@@ -324,12 +336,12 @@ def _build_portfolio_tabs(portfolios: dict) -> str:
             pos_rows += f"""<tr>
               <td><strong>{ticker}</strong></td>
               <td>{info.get('exchange', '')}</td>
-              <td>{p['shares']}</td>
-              <td>{p['avg_price']:.2f}</td>
-              <td>{cur_price_eur:.2f}</td>
-              <td>{eq:.2f}</td>
-              <td class="{pnl_cls}">{pnl_e:+.2f}</td>
-              <td class="{pnl_cls}">{pnl_p:+.2f}%</td>
+              <td class="num">{p['shares']}</td>
+              <td class="num">{p['avg_price']:.2f}</td>
+              <td class="num">{cur_price_eur:.2f}</td>
+              <td class="num">{eq:.2f}</td>
+              <td class="{pnl_cls} num">{pnl_e:+.2f}</td>
+              <td class="{pnl_cls} num">{pnl_p:+.2f}%</td>
             </tr>"""
 
         metrics = _compute_metrics(history)
@@ -347,8 +359,8 @@ def _build_portfolio_tabs(portfolios: dict) -> str:
             <span>Return: <strong class="{'pos' if ret_pct >= 0 else 'neg'}">{ret_pct:+.2f}%</strong></span>
             <span>Positions: <strong>{len(positions)}</strong></span>
           </div>
-          <img src="{chart_b64}" style="width:100%;border-radius:8px;margin:12px 0;" alt="Equity {label}">
-          {'<div style="overflow-x:auto;"><table><thead><tr><th>Ticker</th><th>Exc</th><th>Shares</th><th>Avg</th><th>Cur</th><th>Equity</th><th>PnL</th><th>PnL%</th></tr></thead><tbody>' + pos_rows + '</tbody></table></div>' if pos_rows else '<p style="color:#64748b;padding:12px 0">No positions yet.</p>'}
+          <img class="tab-chart" src="{chart_b64}" alt="Equity {label}">
+          {'<div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Exc</th><th class="num">Shares</th><th class="num">Avg</th><th class="num">Cur</th><th class="num">Equity</th><th class="num">PnL</th><th class="num">PnL%</th></tr></thead><tbody>' + pos_rows + '</tbody></table></div>' if pos_rows else '<p class="empty">No positions yet.</p>'}
         </div>"""
 
     return f"""
@@ -422,7 +434,7 @@ def _build_trade_history_section(portfolios: dict) -> str:
     trades = _extract_completed_trades(portfolios)
 
     if not trades:
-        return '<p style="color:#64748b;padding:12px">Nessun trade concluso.</p>'
+        return '<p class="empty">Nessun trade concluso.</p>'
 
     total_pnl = sum(t["pnl_eur"] for t in trades)
     winning = [t for t in trades if t["pnl_eur"] > 0]
@@ -449,34 +461,34 @@ def _build_trade_history_section(portfolios: dict) -> str:
         date_in = t["date_in"].strftime("%m/%d %H:%M")
         date_out = t["date_out"].strftime("%m/%d %H:%M")
         rows += f"""<tr>
-          <td><span style="background:{sc}22;color:{sc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">{sl}</span></td>
+          <td><span class="strat-tag" style="background:{sc}22;color:{sc}">{sl}</span></td>
           <td><strong>{t['ticker']}</strong></td>
-          <td style="color:#94a3b8;font-size:11px">{date_in}</td>
-          <td style="color:#94a3b8;font-size:11px">{date_out}</td>
-          <td style="text-align:right">{t['shares']}</td>
-          <td style="text-align:right">{t['entry_eur']:.2f}</td>
-          <td style="text-align:right">{t['exit_eur']:.2f}</td>
-          <td class="{pnl_cls}" style="text-align:right;font-weight:600">{sign}{t['pnl_eur']:.2f}</td>
-          <td class="{pnl_cls}" style="text-align:right">{sign}{t['pnl_pct']:.2f}%</td>
+          <td class="date">{date_in}</td>
+          <td class="date">{date_out}</td>
+          <td class="num">{t['shares']}</td>
+          <td class="num">{t['entry_eur']:.2f}</td>
+          <td class="num">{t['exit_eur']:.2f}</td>
+          <td class="{pnl_cls} num strong">{sign}{t['pnl_eur']:.2f}</td>
+          <td class="{pnl_cls} num">{sign}{t['pnl_pct']:.2f}%</td>
         </tr>"""
 
     return f"""
-    <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#94a3b8;margin-bottom:14px;">
-      <span>Trades: <strong style="color:#f8fafc">{len(trades)}</strong></span>
-      <span>Win rate: <strong style="color:#22c55e">{win_rate:.0f}%</strong></span>
+    <div class="trade-summary">
+      <span>Trades: <strong>{len(trades)}</strong></span>
+      <span>Win rate: <strong class="pos">{win_rate:.0f}%</strong></span>
       <span>Vincenti: <strong class="pos">{len(winning)}</strong></span>
       <span>Perdenti: <strong class="neg">{len(losing)}</strong></span>
       <span>P&amp;L totale: <strong class="{total_cls}">{total_sign}{total_pnl:.2f} €</strong></span>
     </div>
-    <div style="overflow-x:auto">
+    <div class="table-scroll">
     <table>
       <thead><tr>
         <th>Strategia</th><th>Ticker</th><th>Data Entrata</th><th>Data Uscita</th>
-        <th style="text-align:right">Q.tà</th>
-        <th style="text-align:right">Prezzo In (€)</th>
-        <th style="text-align:right">Prezzo Out (€)</th>
-        <th style="text-align:right">P&amp;L €</th>
-        <th style="text-align:right">P&amp;L %</th>
+        <th class="num">Q.tà</th>
+        <th class="num">Prezzo In (€)</th>
+        <th class="num">Prezzo Out (€)</th>
+        <th class="num">P&amp;L €</th>
+        <th class="num">P&amp;L %</th>
       </tr></thead>
       <tbody>{rows}</tbody>
     </table>
@@ -522,52 +534,129 @@ def build_html(portfolios: dict, signals: dict = None) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Hedge Fund — Multi-Strategy Dashboard</title>
 <style>
+:root {{
+  color-scheme: dark;
+  --bg:#0a101e; --bg-2:#0f172a;
+  --panel:#131c31; --panel-2:#17223a;
+  --line:#26324a; --line-soft:#1c2740;
+  --text:#e2e8f0; --text-strong:#f8fafc; --muted:#8a99b3; --faint:#64748b;
+  --accent:#38bdf8; --pos:#22c55e; --neg:#ef4444;
+  --radius:10px;
+  --shadow:0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.6);
+}}
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; }}
-a {{ color:#38bdf8; text-decoration:none; }}
-a:hover {{ text-decoration:underline; }}
-.header {{ background:linear-gradient(135deg,#1e293b,#0f172a); padding:24px 32px; border-bottom:1px solid #334155; }}
-.header h1 {{ font-size:22px; font-weight:700; color:#f8fafc; }}
-.header .sub {{ color:#94a3b8; font-size:12px; margin-top:6px; display:flex; gap:16px; flex-wrap:wrap; }}
-.container {{ max-width:1280px; margin:0 auto; padding:24px; }}
-.section-title {{ font-size:15px; font-weight:700; margin:28px 0 12px; color:#f1f5f9; text-transform:uppercase; letter-spacing:0.5px; border-left:3px solid #334155; padding-left:10px; }}
+html {{ -webkit-text-size-adjust:100%; }}
+body {{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:14px; line-height:1.5; color:var(--text);
+  background:radial-gradient(900px 320px at 50% -120px,rgba(56,189,248,0.07),transparent 70%),var(--bg-2);
+  background-color:var(--bg-2);
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+}}
+a {{ color:var(--accent); text-decoration:none; transition:color .15s; }}
+a:hover {{ color:#7dd3fc; text-decoration:underline; }}
+::selection {{ background:rgba(56,189,248,0.3); }}
+* {{ scrollbar-width:thin; scrollbar-color:var(--line) transparent; }}
+::-webkit-scrollbar {{ height:8px; width:8px; }}
+::-webkit-scrollbar-thumb {{ background:var(--line); border-radius:8px; }}
+
+.header {{ position:relative; background:linear-gradient(180deg,#18233b,var(--bg-2)); padding:26px 32px 22px; border-bottom:1px solid var(--line); }}
+.header::before {{ content:""; position:absolute; inset:0 0 auto 0; height:2px;
+  background:linear-gradient(90deg,#22c55e 0 25%,#3b82f6 25% 50%,#f59e0b 50% 75%,#a855f7 75% 100%); opacity:.85; }}
+.header h1 {{ font-size:21px; font-weight:650; letter-spacing:-0.01em; color:var(--text-strong); }}
+.header .sub {{ color:var(--muted); font-size:12px; margin-top:8px; display:flex; gap:6px 22px; flex-wrap:wrap; }}
+.header .sub strong {{ color:var(--text); font-weight:500; }}
+.container {{ max-width:1280px; margin:0 auto; padding:8px 24px 24px; }}
+.section-title {{ display:flex; align-items:center; gap:12px; font-size:12px; font-weight:650; margin:34px 0 14px; color:var(--text-strong);
+  text-transform:uppercase; letter-spacing:0.12em; }}
+.section-title::before {{ content:""; width:3px; height:15px; border-radius:2px; background:linear-gradient(180deg,var(--accent),#3b82f6); }}
+.section-title::after {{ content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }}
+
+/* Panels */
+.panel {{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:28px; }}
+.panel-flush {{ overflow:hidden; }}
+.panel-pad {{ overflow:hidden; padding:20px; }}
 
 /* Strategy cards */
 .strategy-cards {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:28px; }}
-.strategy-card {{ background:#1e293b; border:1px solid #334155; border-radius:10px; padding:18px; }}
-.strat-name {{ font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:#94a3b8; margin-bottom:8px; }}
-.strat-value {{ font-size:22px; font-weight:700; color:#f8fafc; }}
-.strat-return {{ font-size:14px; font-weight:600; margin-top:4px; display:inline-block; padding:2px 8px; border-radius:4px; }}
-.badge-pos {{ background:rgba(34,197,94,0.15); color:#22c55e; }}
-.badge-neg {{ background:rgba(239,68,68,0.15); color:#ef4444; }}
-.strat-daily {{ font-size:12px; margin-top:4px; color:#64748b; }}
+.strategy-card {{ position:relative; background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:var(--radius);
+  padding:18px 18px 16px; box-shadow:var(--shadow); transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }}
+.strategy-card:hover {{ transform:translateY(-2px); border-color:var(--c,var(--line)); box-shadow:0 12px 28px -14px var(--c,#000); }}
+.strat-name {{ font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.14em; color:var(--muted); margin-bottom:10px; }}
+.strat-value {{ font-size:25px; font-weight:650; letter-spacing:-0.02em; color:var(--text-strong); white-space:nowrap; line-height:1.15; }}
+.strat-return {{ font-size:13px; font-weight:600; margin-top:10px; display:inline-block; padding:3px 9px; border-radius:6px; }}
+.badge-pos {{ background:rgba(34,197,94,0.14); color:var(--pos); box-shadow:inset 0 0 0 1px rgba(34,197,94,0.25); }}
+.badge-neg {{ background:rgba(239,68,68,0.14); color:var(--neg); box-shadow:inset 0 0 0 1px rgba(239,68,68,0.25); }}
+.strat-daily {{ font-size:12px; margin-top:8px; color:var(--faint); }}
 
 /* Comparison chart */
-.chart-wrap {{ background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px; margin-bottom:28px; }}
-.chart-wrap img {{ width:100%; border-radius:6px; }}
+.chart-wrap {{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:28px; overflow-x:auto; }}
+.chart-wrap img {{ display:block; width:100%; height:auto; }}
+.tab-chart {{ display:block; width:100%; height:auto; margin:14px 0; }}
 
-/* Screener table */
+/* Tables */
+.table-scroll {{ overflow-x:auto; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
-th {{ background:#1e293b; color:#64748b; text-align:left; padding:9px 10px; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.5px; border-bottom:1px solid #334155; }}
-td {{ padding:8px 10px; border-bottom:1px solid #1a2332; }}
-tr:hover td {{ background:#1e293b; }}
-.pos {{ color:#22c55e; }} .neg {{ color:#ef4444; }} .neutral-lbl {{ color:#94a3b8; }}
+th {{ position:sticky; top:0; background:var(--panel-2); color:var(--muted); text-align:left; padding:10px 14px; font-weight:600; text-transform:uppercase;
+  font-size:10px; letter-spacing:0.1em; border-bottom:1px solid var(--line); white-space:nowrap; }}
+td {{ padding:9px 14px; border-bottom:1px solid var(--line-soft); white-space:nowrap; transition:background .12s; }}
+tbody tr:last-child td {{ border-bottom:none; }}
+td strong {{ font-weight:600; color:var(--text-strong); letter-spacing:0.01em; }}
+tr:hover td {{ background:rgba(56,189,248,0.045); }}
+th.num, td.num {{ text-align:right; }}
+td.date {{ color:var(--muted); font-size:11.5px; }}
+td.strong {{ font-weight:600; }}
+td small {{ color:var(--muted); font-size:10.5px; margin-left:3px; }}
+.pos {{ color:var(--pos); }} .neg {{ color:var(--neg); }} .neutral-lbl {{ color:var(--muted); }}
+.strat-tag {{ display:inline-block; padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:0.06em; }}
+.empty {{ color:var(--faint); padding:14px 0; font-size:13px; }}
+
+/* Score bars */
+.bar {{ display:inline-block; vertical-align:middle; width:60px; height:6px; margin-right:8px; background:#26324a; border-radius:6px; overflow:hidden; }}
+.bar-lg {{ width:80px; }}
+.bar i {{ display:block; height:100%; border-radius:6px; }}
+.bar-fscore {{ background:linear-gradient(90deg,#d97706,#f59e0b); }}
+.bar-comp {{ background:linear-gradient(90deg,#16a34a,#22c55e); }}
 
 /* Tabs */
-.tabs {{ background:#1e293b; border:1px solid #334155; border-radius:10px; overflow:hidden; }}
-.tab-buttons {{ display:flex; gap:0; background:#0f172a; border-bottom:1px solid #334155; flex-wrap:wrap; }}
-.tab-btn {{ background:transparent; border:none; color:#64748b; padding:12px 20px; cursor:pointer; font-size:13px; font-weight:500; transition:all .15s; border-bottom:2px solid transparent; }}
-.tab-btn:hover {{ color:#e2e8f0; background:#1e293b; }}
-.tab-btn.active {{ color:#f8fafc; border-bottom-color:#38bdf8; }}
+.tabs {{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }}
+.tab-buttons {{ display:flex; gap:0; background:var(--bg-2); border-bottom:1px solid var(--line); flex-wrap:wrap; padding:0 6px; }}
+.tab-btn {{ background:transparent; border:none; color:var(--faint); padding:13px 18px; cursor:pointer; font:inherit; font-size:13px; font-weight:500; letter-spacing:0.01em;
+  transition:color .15s,background .15s,border-color .15s; border-bottom:2px solid transparent; margin-bottom:-1px; }}
+.tab-btn:hover {{ color:var(--text); background:rgba(148,163,184,0.06); }}
+.tab-btn:focus-visible {{ outline:2px solid var(--accent); outline-offset:-2px; }}
+.tab-btn.active {{ color:var(--text-strong); font-weight:600; border-bottom-color:var(--accent); }}
 .tab-panel {{ display:none; padding:20px; }}
 .tab-panel.active {{ display:block; }}
-.tab-summary {{ display:flex; gap:20px; flex-wrap:wrap; margin-bottom:12px; font-size:13px; color:#94a3b8; }}
-.tab-summary strong {{ color:#f8fafc; }}
+.tab-summary {{ display:flex; gap:8px 28px; flex-wrap:wrap; margin-bottom:6px; font-size:12px; color:var(--muted); }}
+.tab-summary strong {{ color:var(--text-strong); font-weight:600; font-size:13px; margin-left:2px; }}
+.tab-summary strong.pos {{ color:var(--pos); }} .tab-summary strong.neg {{ color:var(--neg); }}
+.trade-summary {{ display:flex; gap:8px 28px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line-soft); }}
+.trade-summary strong {{ color:var(--text-strong); font-weight:600; font-size:13px; margin-left:2px; }}
+.trade-summary strong.pos {{ color:var(--pos); }} .trade-summary strong.neg {{ color:var(--neg); }}
+.panel-pad .table-scroll {{ margin:0 -20px -20px; }}
 
 /* Footer */
-.footer {{ text-align:center; padding:24px; color:#475569; font-size:12px; border-top:1px solid #1e293b; margin-top:28px; }}
+.footer {{ text-align:center; padding:24px; color:var(--faint); font-size:11.5px; letter-spacing:0.02em; border-top:1px solid var(--line-soft); margin-top:28px; }}
 
-@media(max-width:768px) {{ .strategy-cards {{ grid-template-columns:repeat(2,1fr); }} }}
+@media(max-width:768px) {{
+  .header {{ padding:20px 16px 16px; }}
+  .header h1 {{ font-size:18px; }}
+  .container {{ padding:4px 14px 20px; }}
+  .strategy-cards {{ grid-template-columns:repeat(2,1fr); gap:10px; }}
+  .strategy-card {{ padding:14px 12px 12px; }}
+  .strat-value {{ font-size:18px; }}
+  .strat-name {{ letter-spacing:0.1em; }}
+  th, td {{ padding:8px 10px; }}
+  .tab-btn {{ padding:12px 12px; }}
+  .tab-panel {{ padding:14px; }}
+  .chart-wrap {{ padding:10px; }}
+  .chart-wrap img, .tab-chart {{ min-width:640px; }}
+  .tab-panel .tab-chart {{ margin-right:0; }}
+  .panel-pad {{ padding:14px; }}
+  .panel-pad .table-scroll {{ margin:0 -14px -14px; }}
+}}
+@media(prefers-reduced-motion:reduce) {{ * {{ transition:none !important; }} .strategy-card:hover {{ transform:none; }} }}
 </style>
 </head>
 <body>
@@ -592,7 +681,7 @@ tr:hover td {{ background:#1e293b; }}
   </div>
 
   <div class="section-title">Stock Screener</div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;overflow:hidden;margin-bottom:28px;">
+  <div class="panel panel-flush">
     {screener_html}
   </div>
 
@@ -600,7 +689,7 @@ tr:hover td {{ background:#1e293b; }}
   {portfolio_tabs_html}
 
   <div class="section-title">Completed Trades</div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;overflow:hidden;padding:20px;margin-bottom:28px;">
+  <div class="panel panel-pad">
     {trade_history_html}
   </div>
 
