@@ -31,9 +31,11 @@ def _render(payload: dict) -> str:
     return template.replace("__DATA__", data)
 
 
-def build_html(portfolios: dict, signals: dict | None = None) -> str:
-    """HTML completo della dashboard multi-portafoglio."""
-    payload = build_payload(portfolios, signals, load_price_history())
+def build_html(
+    portfolios: dict, signals: dict | None = None, live_prices: dict | None = None
+) -> str:
+    """HTML completo della dashboard multi-portafoglio (live_prices opzionale)."""
+    payload = build_payload(portfolios, signals, load_price_history(), live_prices)
     return _render(payload)
 
 

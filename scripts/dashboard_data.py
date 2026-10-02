@@ -4,7 +4,7 @@ Costruisce il payload JSON che alimenta la dashboard (docs/index.html + docs/dat
 Tutta la logica numerica sta qui (e in metrics.py); l'HTML si limita a disegnare.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from config import (
     BENCHMARKS,
@@ -23,11 +23,12 @@ from metrics import (
 )
 from valuation import last_known_prices
 
+# Colori distinti dai semantici positivo/negativo (verde/rosso) e dall'accento del brand.
 STRATEGY_COLORS = {
-    "equal_weight": "#22c55e",
-    "momentum": "#3b82f6",
+    "equal_weight": "#0ea5e9",
+    "momentum": "#8b5cf6",
     "fundamental": "#f59e0b",
-    "sentiment": "#a855f7",
+    "sentiment": "#ec4899",
 }
 
 
@@ -109,20 +110,23 @@ def _screener_rows(signals: dict) -> list:
     return rows
 
 
-def _positions(portfolio: dict, price_history: dict, total_value: float) -> list:
+def _positions(portfolio: dict, price_history: dict, live_prices: dict | None = None) -> list:
     history = portfolio.get("iterations_log", [])
     last = history[-1] if history else {}
-    day = last.get("timestamp", "")[:10]
+    live_prices = live_prices or {}
+    # Con prezzi live si usa il cambio piu' recente dello storico, non quello dell'ultima voce.
+    day = str(date.today()) if live_prices else last.get("timestamp", "")[:10]
+    entry_fx = None if live_prices else last.get("fx_rates")
     used = last.get("prices_used", {}) or {}
     last_known = last_known_prices(portfolio)
-    entry_fx = last.get("fx_rates")
 
     rows = []
     for ticker, pos in sorted(portfolio.get("current_positions", {}).items()):
         info = UNIVERSE.get(ticker, {})
         ccy = info.get("currency", "EUR")
         fx = fx_rate(ccy, day, entry_fx, price_history, FX_FALLBACK)
-        local = used.get(ticker) or last_known.get(ticker)
+        live = live_prices.get(ticker) or 0.0
+        local = live or used.get(ticker) or last_known.get(ticker)
         price_eur = local * fx if local else pos["avg_price"]
         value = price_eur * pos["shares"]
         cost = pos["avg_price"] * pos["shares"]
@@ -139,8 +143,8 @@ def _positions(portfolio: dict, price_history: dict, total_value: float) -> list
                 "pnl_pct": round((price_eur / pos["avg_price"] - 1) * 100, 2)
                 if pos["avg_price"] > 0
                 else 0.0,
-                "weight": round(value / total_value, 4) if total_value > 0 else 0.0,
-                "stale": ticker not in used,
+                "stale": not live and ticker not in used,
+                "live": bool(live),
             }
         )
     return rows
@@ -152,11 +156,21 @@ def _benchmarks(price_history: dict, start_day: str) -> dict:
         days = price_history.get(ticker, {})
         series = [[d, p] for d, p in sorted(days.items()) if d >= start_day]
         if len(series) >= 2:
-            out[ticker] = {"label": label, "series": series}
+            out[ticker] = {
+                "label": label,
+                "series": series,
+                "metrics": compute_metrics([(d, p) for d, p in series], RISK_FREE_RATE),
+            }
     return out
 
 
-def build_payload(portfolios: dict, signals: dict | None = None, price_history: dict | None = None) -> dict:
+def build_payload(
+    portfolios: dict,
+    signals: dict | None = None,
+    price_history: dict | None = None,
+    live_prices: dict | None = None,
+) -> dict:
+    """live_prices: {ticker: prezzo in valuta locale}, opzionale (dashboard Flask)."""
     signals = signals or {}
     price_history = price_history or {}
 
@@ -174,7 +188,12 @@ def build_payload(portfolios: dict, signals: dict | None = None, price_history: 
         all_days.append(daily[0][0])
         metrics = compute_metrics(daily, RISK_FREE_RATE)
         meta = portfolio.get("metadata", {})
-        total = daily[-1][1]
+        meta_cash = meta.get("current_cash", 0.0)
+        positions = _positions(portfolio, price_history, live_prices)
+        live_total = meta_cash + sum(p["value"] for p in positions)
+        for p in positions:
+            p["weight"] = round(p["value"] / live_total, 4) if live_total > 0 else 0.0
+        is_live = any(p["live"] for p in positions)
         strategies[sname] = {
             "label": STRATEGY_LABELS.get(sname, sname),
             "color": STRATEGY_COLORS.get(sname, "#94a3b8"),
@@ -184,7 +203,8 @@ def build_payload(portfolios: dict, signals: dict | None = None, price_history: 
             "cash": round(meta.get("current_cash", 0.0), 2),
             "initial_capital": meta.get("initial_capital", 3000.0),
             "fees_paid": round(meta.get("fees_paid", 0.0), 2),
-            "positions": _positions(portfolio, price_history, total),
+            "positions": positions,
+            "live_value": round(live_total, 2) if is_live else None,
             "repaired_points": sum(1 for p in series if p["repaired"]),
             "iterations": len(history),
             "last_update": history[-1]["timestamp"] if history else None,

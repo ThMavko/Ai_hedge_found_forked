@@ -57,15 +57,17 @@ Ogni strategia ha un portafoglio indipendente in `data/portfolios/<strategia>.js
 
 ## Dashboard
 
-`docs/index.html` è una pagina autosufficiente (dati incorporati, grafici Plotly da CDN): si apre anche da file locale. Contiene:
+`docs/index.html` è una pagina autosufficiente (dati incorporati, grafici Plotly da CDN): si apre anche da file locale. Il linguaggio visivo (token a livelli, light di default e dark progettato a parte, accento derivato con `color-mix()`) segue il design system di DemoGeneratorOfficial.
 
-- **KPI** per strategia e per benchmark (MSCI World in EUR via `SWDA.MI`, S&P 500 via `SPY`);
-- **Equity curve interattiva** in Base 100, in valore € o come drawdown;
-- **Confronto metriche**: rendimento, annualizzato, volatilità, Sharpe, Sortino, max drawdown, Calmar, % giorni positivi, costi;
-- **Portafoglio** per strategia: allocazione, esposizione per settore, posizioni con P&L;
-- **Screener** (momentum, F-score, sentiment, punteggio composito);
-- **Trade conclusi** con filtro per strategia;
-- tema chiaro/scuro e layout mobile.
+- **Topbar** in vetro con navigazione per sezioni (scrollspy) e **switch tema sole ⇄ luna**, salvato in localStorage (`aihf.theme`) e applicato prima del primo paint; `?theme=dark` lo forza;
+- **Panoramica**: strategia in testa con confronto sul benchmark, classifica per rendimento (strategie e benchmark) con sparkline e quattro indicatori chiave;
+- **Andamento** interattivo: Base 100, valore in € o drawdown, intervallo 1M / 3M / Tutto e serie attivabili una per una;
+- **Metriche**: rendimento, volatilità, Sharpe, Sortino, max drawdown e % giorni positivi, con evidenziazione del migliore e tabella ordinabile, più la mappa rischio/rendimento. Rendimento annualizzato e Calmar sono omessi di proposito: con pochi mesi di storico sarebbero fuorvianti;
+- **Portafoglio** per strategia: allocazione, esposizione per settore, P&L per posizione e posizioni ordinabili con peso e P&L;
+- **Screener** ordinabile e filtrabile per mercato, e **trade conclusi** con filtro per strategia;
+- **Effetti 3D**: card che si inclinano seguendo il puntatore con riflesso di luce e parallasse interno, ombre a più strati; **torta 3D** in SVG (spessore, pareti, ombra a terra) con fetta che si solleva e si illumina in hover e dettagli al centro;
+- **Luci lampeggianti** sugli estremi delle curve e sui punti rischio/rendimento, con alone luminoso sulle linee (le sparkline restano ferme);
+- layout mobile; con `prefers-reduced-motion` o su dispositivi touch tilt e animazioni sono disattivati.
 
 Le stesse informazioni sono in `docs/data.json`. Per GitHub Pages: Settings → Pages → sorgente `docs/`.
 

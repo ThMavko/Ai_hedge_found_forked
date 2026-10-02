@@ -51,3 +51,17 @@ def test_render_escapes_script_terminator():
     payload = build_payload({}, {}, {})
     payload["note"] = "</script><b>x</b>"
     assert "</script><b>" not in _render(payload)
+
+
+def test_live_prices_override_positions_and_value():
+    portfolio = _portfolio()
+    portfolio["iterations_log"][-1]["prices_used"] = {"AAPL": 100.0}
+    base = build_payload({"equal_weight": portfolio}, {}, {})["strategies"]["equal_weight"]
+    assert base["live_value"] is None
+
+    live = build_payload({"equal_weight": portfolio}, {}, {}, {"AAPL": 150.0})["strategies"]["equal_weight"]
+    pos = live["positions"][0]
+    assert pos["live"] is True and pos["stale"] is False
+    # AAPL e' quotata in USD: il valore dipende dal cambio, ma il prezzo live deve prevalere
+    assert pos["price_eur"] > base["positions"][0]["price_eur"]
+    assert live["live_value"] > base["metrics"]["final"] - 1e-9
