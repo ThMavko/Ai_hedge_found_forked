@@ -15,6 +15,8 @@ import matplotlib.dates as mdates
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+from metrics import history_metrics  # noqa: E402
+
 DASHBOARD_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "index.html")
 
 STRATEGY_COLORS = {
@@ -59,48 +61,7 @@ def _calc_max_drawdown(values: list) -> float:
 
 
 def _compute_metrics(history: list) -> dict:
-    if not history:
-        return {}
-    values = [e["total_value_eur"] for e in history]
-    initial = history[0].get("total_value_eur", values[0])
-    final = values[-1]
-    total_return = (final - initial) / initial * 100
-    n = len(values)
-    daily_rets = _calc_daily_returns(values)
-    n_days = len(daily_rets)
-    avg_daily_ret = sum(daily_rets) / n_days if n_days > 0 else 0
-    daily_vol = (
-        math.sqrt(sum((r - avg_daily_ret) ** 2 for r in daily_rets) / n_days)
-        if n_days > 0
-        else 0
-    )
-    trading_days_year = 252
-    ann_return = total_return / n * trading_days_year if n > 0 else 0
-    ann_vol = daily_vol * math.sqrt(trading_days_year)
-    sharpe = ann_return / ann_vol if ann_vol > 0 else 0
-    max_dd = _calc_max_drawdown(values)
-    calmar = ann_return / max_dd if max_dd > 0 else 0
-    gains = [r for r in daily_rets if r > 0]
-    losses = [r for r in daily_rets if r < 0]
-    win_rate = len(gains) / n_days * 100 if n_days > 0 else 0
-    profit_factor = (
-        abs(sum(gains) / sum(losses)) if losses and sum(losses) != 0 else float("inf")
-    )
-    return {
-        "total_return": total_return,
-        "ann_return": ann_return,
-        "ann_vol": ann_vol,
-        "sharpe": sharpe,
-        "max_drawdown": max_dd,
-        "calmar": calmar,
-        "win_rate": win_rate,
-        "profit_factor": profit_factor,
-        "n_entries": n,
-        "initial": initial,
-        "final": final,
-        "daily_rets": daily_rets,
-        "values": values,
-    }
+    return history_metrics(history)
 
 
 def _fig_to_b64(fig) -> str:

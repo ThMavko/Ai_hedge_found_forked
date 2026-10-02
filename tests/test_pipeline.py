@@ -15,12 +15,14 @@ TWO = {
 def run(monkeypatch):
     """Esegue run_strategy_pipeline su un universo a 2 titoli, senza toccare i file."""
 
-    def _run(portfolio, prices, strategy="equal_weight", failed=frozenset()):
+    def _run(
+        portfolio, prices, strategy="equal_weight", failed=frozenset(), last_known=None
+    ):
         monkeypatch.setattr(mp, "UNIVERSE", TWO)
         monkeypatch.setattr(mp, "load_portfolio_for_strategy", lambda s: portfolio)
         monkeypatch.setattr(mp, "log_iteration_for_strategy", lambda *a, **k: None)
         return mp.run_strategy_pipeline(
-            strategy, "sera", prices, {"EUR": 1.0}, {}, set(failed)
+            strategy, "sera", prices, {"EUR": 1.0}, {}, set(failed), last_known or {}
         )
 
     return _run
@@ -81,6 +83,38 @@ def test_all_prices_failed_disables_trading(run):
     res = run(_fresh(1000.0), {"AAA": 100.0, "BBB": 100.0}, failed={"AAA", "BBB"})
     assert res["transactions"] == []
     assert res["has_trades"] is False
+
+
+def _held(cash=0.0):
+    return _fresh(
+        cash=cash,
+        positions={
+            "AAA": {"shares": 10, "avg_price": 100.0},
+            "BBB": {"shares": 10, "avg_price": 50.0},
+        },
+    )
+
+
+def test_total_value_keeps_positions_with_missing_price_at_last_known(run):
+    """Regressione: a fine sessione i titoli senza prezzo venivano valutati 0 EUR."""
+    res = run(
+        _held(),
+        {"AAA": 100.0},  # BBB senza prezzo
+        failed={"BBB"},
+        last_known={"BBB": 80.0},
+    )
+    assert res["total_value_eur"] == pytest.approx(1000.0 + 800.0)
+
+
+def test_total_value_falls_back_to_avg_price_without_history(run):
+    res = run(_held(), {"AAA": 100.0}, failed={"BBB"}, last_known={})
+    assert res["total_value_eur"] == pytest.approx(1000.0 + 500.0)
+
+
+def test_total_value_same_whether_or_not_prices_missing(run):
+    full = run(_held(), {"AAA": 100.0, "BBB": 80.0})
+    missing = run(_held(), {"AAA": 100.0}, failed={"BBB"}, last_known={"BBB": 80.0})
+    assert missing["total_value_eur"] == pytest.approx(full["total_value_eur"])
 
 
 def _result(total, cash, txs=()):

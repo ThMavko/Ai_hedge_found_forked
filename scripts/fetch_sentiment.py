@@ -66,25 +66,37 @@ def fetch_av_news_sentiment(ticker: str) -> dict:
         return {"score": 0.0, "label": "neutral", "num_articles": 0, "headlines": []}
 
 
-def run_finbert_on_headlines(headlines: list) -> float:
-    """
-    Run FinBERT on a list of headlines. Returns mean score in [-1, 1].
-    Lazy-loads the model (only if called).
-    Returns 0.0 if no headlines or if transformers is not available.
-    """
-    if not headlines:
-        return 0.0
-    try:
+_FINBERT = None
+
+
+def _get_finbert():
+    """Carica FinBERT una sola volta per processo (prima veniva ricaricato, ~400 MB,
+    per ognuno dei 20 ticker)."""
+    global _FINBERT
+    if _FINBERT is None:
         from transformers import pipeline as hf_pipeline
 
         print("[INFO] Loading FinBERT model...")
-        finbert = hf_pipeline(
+        _FINBERT = hf_pipeline(
             "text-classification",
             model="ProsusAI/finbert",
             truncation=True,
             max_length=512,
             device=-1,  # CPU
         )
+    return _FINBERT
+
+
+def run_finbert_on_headlines(headlines: list) -> float:
+    """
+    Run FinBERT on a list of headlines. Returns mean score in [-1, 1].
+    Lazy-loads the model once (only if called).
+    Returns 0.0 if no headlines or if transformers is not available.
+    """
+    if not headlines:
+        return 0.0
+    try:
+        finbert = _get_finbert()
         scores = []
         for headline in headlines:
             if not headline.strip():
@@ -99,8 +111,8 @@ def run_finbert_on_headlines(headlines: list) -> float:
                     scores.append(-conf)
                 else:
                     scores.append(0.0)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[WARN] FinBERT inference failed on a headline: {e}")
         return round(sum(scores) / len(scores), 4) if scores else 0.0
     except ImportError:
         print("[WARN] transformers not installed, skipping FinBERT")

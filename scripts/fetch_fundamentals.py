@@ -44,7 +44,9 @@ def score_fundamental(info: dict) -> float:
         score += de_score
         count += 1
 
-    return round(score / count, 4) if count > 0 else 0.5
+    # Nessuna metrica disponibile (es. Yahoo blocca l'IP di GitHub Actions e
+    # `info` torna vuoto): None, non 0.5, altrimenti sembra un dato reale.
+    return round(score / count, 4) if count > 0 else None
 
 
 def fetch_all_fundamentals(universe: dict) -> dict:
@@ -57,6 +59,10 @@ def fetch_all_fundamentals(universe: dict) -> dict:
         try:
             info = yf.Ticker(ticker).info
             f_score = score_fundamental(info)
+            if f_score is None:
+                print(f"[WARN] No fundamentals data for {ticker}")
+                results[ticker] = {"error": "no_data"}
+                continue
             results[ticker] = {
                 "pe_ratio": info.get("trailingPE"),
                 "pb_ratio": info.get("priceToBook"),
@@ -68,14 +74,20 @@ def fetch_all_fundamentals(universe: dict) -> dict:
             }
         except Exception as e:
             print(f"[WARN] Fundamentals failed for {ticker}: {e}")
-            results[ticker] = {"f_score": 0.5}
+            results[ticker] = {"error": str(e)[:120]}
         time.sleep(0.5)
 
     return results
 
 
-def fetch_momentum(universe: dict) -> dict:
-    """Calcola momentum 3m e 1m per ogni ticker."""
+def fetch_momentum(universe: dict, fallback: dict | None = None) -> dict:
+    """Momentum 3m e 1m per ogni ticker.
+
+    Prima prova yfinance; se non risponde (succede su GitHub Actions) usa
+    `fallback` (segnali calcolati dallo storico prezzi del progetto). Un ticker
+    senza alcun dato viene omesso: mai riempito con 0.0.
+    """
+    fallback = fallback or {}
     results = {}
     tickers = list(universe.keys())
 
@@ -98,12 +110,15 @@ def fetch_momentum(universe: dict) -> dict:
                 results[ticker] = {
                     "return_3m": round(ret_3m, 4),
                     "return_1m": round(ret_1m, 4),
+                    "source": "yfinance",
                 }
-            else:
-                results[ticker] = {"return_3m": 0.0, "return_1m": 0.0}
+                continue
         except Exception as e:
             print(f"[WARN] Momentum failed for {ticker}: {e}")
-            results[ticker] = {"return_3m": 0.0, "return_1m": 0.0}
+        if ticker in fallback:
+            results[ticker] = fallback[ticker]
+        else:
+            print(f"[WARN] No momentum data for {ticker}: omitted")
 
     return results
 
@@ -114,8 +129,11 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(__file__))
     from config import UNIVERSE
 
+    from price_history import compute_price_signals, load_history
+
+    price_signals = compute_price_signals(load_history())
     fundamentals = fetch_all_fundamentals(UNIVERSE)
-    momentum = fetch_momentum(UNIVERSE)
+    momentum = fetch_momentum(UNIVERSE, fallback=price_signals["momentum"])
 
     signals_path = os.path.join(
         os.path.dirname(__file__), "..", "data", "signals.json"
@@ -128,6 +146,8 @@ if __name__ == "__main__":
 
     signals["fundamentals"] = fundamentals
     signals["momentum"] = momentum
+    signals["volatility"] = price_signals["volatility"]
+    signals["trend"] = price_signals["trend"]
     signals["fundamentals_updated"] = datetime.now(timezone.utc).isoformat()
 
     with open(signals_path, "w") as f:

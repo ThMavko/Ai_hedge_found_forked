@@ -30,7 +30,12 @@ Aggiungere una strategia = una classe in `scripts/strategies/` + export in `__in
 | `scripts/fetch_fundamentals.py`, `fetch_sentiment.py` | Calcolo segnali → `data/signals.json` |
 | `scripts/portfolio_io.py` | Lettura/scrittura dei portafogli JSON in `data/portfolios/` |
 | `scripts/market_note.py` | Nota di mercato nel report Telegram (vedi sotto) |
-| `scripts/metrics.py` | Metriche di performance (Sharpe, Sortino, drawdown, CAGR, Calmar) |
+| `scripts/metrics.py` | Metriche di performance (Sharpe, Sortino, drawdown, CAGR, Calmar), usate anche dalle dashboard |
+| `scripts/valuation.py` | Valutazione del portafoglio in EUR (un solo calcolo, prima e dopo gli ordini) |
+| `scripts/fx.py` | Cambi verso EUR con cache giornaliera (`data/fx_cache.json`) e ultimo tasso noto |
+| `scripts/price_history.py` | Storico prezzi ricostruito dai log + segnali (momentum, volatilità, trend) |
+| `scripts/signal_health.py` | Copertura dei segnali e avviso nel report se troppo bassa |
+| `scripts/repair_history.py` | Ripara i valori storici falsati da prezzi mancanti (anteprima di default) |
 | `scripts/backtest.py` | Backtest storico con benchmark |
 | `scripts/dashboard_generator.py`, `web/` | Dashboard HTML statica (`docs/`) e app Streamlit/Flask |
 
@@ -48,6 +53,34 @@ Aggiungere una strategia = una classe in `scripts/strategies/` + export in `__in
 3. **Lotti interi**: acquisti/vendite arrotondati per difetto a un numero intero di azioni.
 4. I prezzi USD/GBP/GBp sono convertiti in EUR con il cambio live.
 5. Se il prezzo di un titolo non è disponibile (fallback), per quel titolo il trading è sospeso.
+
+## Qualità dei dati
+
+Su GitHub Actions Yahoo Finance blocca le richieste e Alpha Vantage ha 25 richieste/giorno. La
+pipeline è costruita perché questo non produca dati finti:
+
+- **Segnali mancanti ≠ segnali a zero.** Se un segnale non si può calcolare, il ticker viene
+  omesso (non riempito con `0.0` o `0.5`). Le strategie ignorano i ticker senza dato e, se non
+  resta nulla, usano esplicitamente una lista di ripiego.
+- **Momentum dallo storico del progetto.** Se yfinance non risponde, il momentum a 3 mesi si
+  calcola da `prices_used` nei log dei portafogli (nessuna chiamata di rete, nessuna chiave).
+  Servono 64 giorni di prezzi per titolo: chi ne ha meno resta fuori finché non li accumula.
+- **Valutazione coerente.** Un titolo senza prezzo del giorno è valutato all'ultimo prezzo reale
+  noto, poi al costo medio. Mai a zero.
+- **Cambi con cache.** Un solo fetch per valuta al giorno; se fallisce si usa l'ultimo tasso reale,
+  non un valore fisso. I tassi usati sono registrati in ogni iterazione (`fx_rates`).
+- **Copertura segnali nel report.** Se un segnale copre meno del 50% dei ticker, il report
+  Telegram lo dice.
+
+Le valutazioni registrate prima di queste correzioni contengono buchi (posizioni valutate a 0 nei
+giorni con prezzi mancanti). Per vederli e correggerli:
+
+```bash
+python scripts/repair_history.py           # anteprima, non scrive nulla
+python scripts/repair_history.py --apply   # riscrive data/portfolios/*.json
+```
+
+La correzione è esatta per i titoli in EUR e approssimata per USD/GBP (cambio di ripiego).
 
 ## Backtest
 

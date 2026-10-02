@@ -5,7 +5,6 @@ import math
 import json
 from datetime import datetime, timezone
 
-import requests
 
 # Ensure scripts/ directory is on the path so config and strategies are importable
 sys.path.insert(0, os.path.dirname(__file__))
@@ -20,6 +19,10 @@ from portfolio_io import (
 )
 from telegram_utils import send_telegram_message, send_telegram_photo
 from market_note import generate_market_note
+from signal_health import compute_coverage, format_health_warning
+from fx import get_fx_rate
+from price_history import latest_prices, load_history
+from valuation import value_positions_eur
 from chart_utils import generate_dashboard
 from dashboard_generator import build_html
 
@@ -46,28 +49,8 @@ STRATEGY_INSTANCES = {
 
 
 def fetch_fx_rate(base: str, quote: str = "EUR") -> float:
-    if base == "GBp":
-        return fetch_fx_rate("GBP", quote) / 100
-    if base == quote:
-        return 1.0
-    url = "https://www.alphavantage.co/query"
-    params = {
-        "function": "CURRENCY_EXCHANGE_RATE",
-        "from_currency": base,
-        "to_currency": quote,
-        "apikey": AV_KEY,
-    }
-    try:
-        resp = requests.get(url, params=params, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        key = "Realtime Currency Exchange Rate"
-        if key in data:
-            return float(data[key]["5. Exchange Rate"])
-    except (requests.RequestException, KeyError, ValueError, TypeError) as e:
-        print(f"[WARN] FX fetch failed {base}->{quote}: {e}. Using fallback.")
-    fallback_rates = {"USD": 0.92, "GBP": 1.17, "GBp": 0.0117}
-    return fallback_rates.get(base, 1.0)
+    """Tasso di cambio con cache giornaliera e ultimo valore noto (vedi fx.py)."""
+    return get_fx_rate(base, quote, AV_KEY)
 
 
 def convert_to_eur(amount: float, currency: str, fx_rates: dict | None = None) -> float:
@@ -116,6 +99,7 @@ def run_strategy_pipeline(
     fx_rates: dict,
     signals: dict,
     failed_tickers: set,
+    last_known: dict | None = None,
 ) -> dict:
     """
     Run the trading pipeline for one strategy.
@@ -130,25 +114,13 @@ def run_strategy_pipeline(
     tickers = list(UNIVERSE.keys())
 
     # --- Compute portfolio value ---
-    portfolio_value_eur = 0.0
-    position_values_eur = {}
-    for ticker in tickers:
-        price_local = prices.get(ticker, 0)
-        currency = UNIVERSE[ticker]["currency"]
-        price_eur = price_local * fx_rates.get(currency, 1.0)
-        pos = portfolio["current_positions"].get(ticker, {})
-        shares = pos.get("shares", 0)
-        # For tickers with fallback price, use avg_price (cost basis in EUR) to avoid
-        # inflation from a generic 100 EUR fallback on cheap stocks in large lots.
-        if ticker in failed_tickers:
-            pos_val_eur = pos.get("avg_price", price_eur) * shares
-        else:
-            pos_val_eur = price_eur * shares
-        position_values_eur[ticker] = pos_val_eur
-        portfolio_value_eur += pos_val_eur
-
+    # Titoli senza prezzo valido: ultimo prezzo noto, poi costo medio (vedi valuation.py)
+    if last_known is None:
+        last_known = latest_prices(load_history())
+    position_values_eur, portfolio_value_eur = value_positions_eur(
+        portfolio, UNIVERSE, prices, fx_rates, last_known, failed_tickers
+    )
     cash_eur = portfolio["metadata"]["current_cash"]
-    portfolio_value_eur += cash_eur
 
     all_failed = len(failed_tickers) >= len(tickers)
     if all_failed:
@@ -165,6 +137,7 @@ def run_strategy_pipeline(
             [],
             prices,
             msg,
+            fx_rates=fx_rates,
         )
         return {
             "total_value_eur": portfolio_value_eur,
@@ -298,13 +271,10 @@ def run_strategy_pipeline(
         else:
             reasoning_parts.append(f"{ticker}: HOLD (on target)")
 
-    # Recalculate total after trades
+    # Recalculate total after trades (stessa valutazione di prima degli ordini)
     cash_eur = portfolio["metadata"]["current_cash"]
-    total_value_eur = cash_eur + sum(
-        prices.get(t, 0)
-        * fx_rates.get(UNIVERSE[t]["currency"], 1.0)
-        * portfolio["current_positions"].get(t, {}).get("shares", 0)
-        for t in tickers
+    _, total_value_eur = value_positions_eur(
+        portfolio, UNIVERSE, prices, fx_rates, last_known, failed_tickers
     )
 
     reasoning = "\n".join(reasoning_parts)
@@ -316,6 +286,7 @@ def run_strategy_pipeline(
         transactions,
         prices,
         reasoning,
+        fx_rates=fx_rates,
     )
 
     return {
@@ -586,6 +557,14 @@ def build_telegram_report(
             )
         else:
             lines.append(f"  {short} ERROR")
+
+    try:
+        warning = format_health_warning(compute_coverage(signals or {}, UNIVERSE))
+        if warning:
+            lines.append("")
+            lines.append(warning)
+    except Exception as e:
+        print(f"[WARN] Signal health check failed: {e}")
 
     # Warn if strategies have identical values (signals not yet available)
     unique_totals = set(round(v, 0) for v in totals.values())

@@ -96,6 +96,7 @@ def log_iteration_for_strategy(
     transactions: list[dict[str, Any]],
     prices: dict[str, float],
     reasoning: str,
+    fx_rates: dict[str, float] | None = None,
 ) -> None:
     """Log iteration for a specific strategy portfolio."""
     entry = {
@@ -114,5 +115,8 @@ def log_iteration_for_strategy(
         "transactions": transactions,
         "reasoning": reasoning,
     }
+    if fx_rates:
+        # i tassi usati rendono la valutazione riproducibile e riparabile a posteriori
+        entry["fx_rates"] = {k: round(v, 6) for k, v in fx_rates.items()}
     portfolio["iterations_log"].append(entry)
     save_portfolio_for_strategy(strategy_name, portfolio)

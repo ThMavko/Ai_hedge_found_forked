@@ -99,3 +99,49 @@ def summarize(values: list[float], risk_free: float = 0.0) -> dict[str, float]:
         "max_drawdown": max_drawdown(values),
         "calmar": calmar(values),
     }
+
+
+def collapse_to_daily(history: list[dict]) -> list[float]:
+    """Una valutazione per giorno (l'ultima): il live registra ~3 iterazioni al
+    giorno, e trattarle come "giorni" falserebbe annualizzazione e Sharpe."""
+    by_day: dict[str, float] = {}
+    for i, entry in enumerate(history):
+        # senza timestamp ogni voce vale come un giorno a se'
+        day = str(entry.get("timestamp", i))[:10]
+        by_day[day] = entry["total_value_eur"]
+    return list(by_day.values())
+
+
+def history_metrics(history: list[dict]) -> dict:
+    """Metriche per le dashboard a partire da `iterations_log`.
+
+    Percentuali espresse in punti percentuali (12.5 = 12.5%), come si aspettano
+    i template HTML. Le metriche di rischio usano un valore per giorno; `values`
+    resta la serie completa per i grafici.
+    """
+    if not history:
+        return {}
+    values = [e["total_value_eur"] for e in history]
+    daily = collapse_to_daily(history)
+    rets = daily_returns(daily)
+    gains = [r for r in rets if r > 0]
+    losses = [r for r in rets if r < 0]
+    mdd = max_drawdown(daily)
+    ann = cagr(daily)
+    return {
+        "total_return": total_return(values) * 100,
+        "ann_return": ann * 100,
+        "ann_vol": annualized_vol(rets) * 100,
+        "sharpe": sharpe(rets),
+        "sortino": sortino(rets),
+        "max_drawdown": mdd * 100,
+        "calmar": ann / mdd if mdd > 0 else 0.0,
+        "win_rate": len(gains) / len(rets) * 100 if rets else 0.0,
+        "profit_factor": abs(sum(gains) / sum(losses)) if losses else float("inf"),
+        "n_entries": len(values),
+        "n_days": len(daily),
+        "initial": values[0],
+        "final": values[-1],
+        "daily_rets": [r * 100 for r in rets],
+        "values": values,
+    }
