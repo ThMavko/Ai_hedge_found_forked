@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Hedge Fund — Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-basic-2.35.2.min.js" charset="utf-8"></script>
+<style>
+:root {
+  --bg:#f6f7f9; --card:#ffffff; --border:#e2e6ec; --text:#1b2330; --muted:#667085;
+  --pos:#15803d; --neg:#dc2626; --accent:#2563eb; --grid:#e8ebf0; --hover:#f1f4f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0e1420; --card:#161e2e; --border:#26324a; --text:#e6ebf4; --muted:#8c9ab3;
+    --pos:#34d399; --neg:#f87171; --accent:#60a5fa; --grid:#222d44; --hover:#1c2639;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0e1420; --card:#161e2e; --border:#26324a; --text:#e6ebf4; --muted:#8c9ab3;
+  --pos:#34d399; --neg:#f87171; --accent:#60a5fa; --grid:#222d44; --hover:#1c2639;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { overflow-x:hidden; background:var(--bg); color:var(--text); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:1200px; margin:0 auto; padding:0 16px 40px; }
+header { padding:22px 0 14px; display:flex; flex-wrap:wrap; gap:8px 20px; align-items:flex-end; justify-content:space-between; }
+h1 { font-size:20px; font-weight:700; letter-spacing:-.01em; }
+.meta { color:var(--muted); font-size:12px; display:flex; gap:6px 16px; flex-wrap:wrap; align-items:center; }
+.meta button { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:2px 8px; cursor:pointer; font-size:12px; }
+h2 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:30px 0 10px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr)); gap:12px; }
+.kpis > *, .grid2 > * { min-width:0; }
+.kpi { border-top:3px solid var(--c, var(--accent)); }
+.kpi .name { font-size:12px; color:var(--muted); }
+.kpi .val { font-size:22px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
+.kpi .sub { font-size:12px; margin-top:2px; display:flex; gap:10px; }
+.kpi.bench { border-top-style:dashed; }
+.pos { color:var(--pos); } .neg { color:var(--neg); } .muted { color:var(--muted); }
+.seg { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:10px; flex-wrap:wrap; }
+.seg button { background:transparent; border:0; color:var(--muted); padding:6px 14px; cursor:pointer; font-size:13px; }
+.seg button.on { background:var(--accent); color:#fff; }
+.chart { width:100%; height:380px; }
+.chart.sm { height:300px; }
+.scroll { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+th { text-align:right; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+th:first-child, td:first-child { text-align:left; }
+td { text-align:right; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+tr:last-child td { border-bottom:0; }
+tbody tr:hover td { background:var(--hover); }
+td.best { font-weight:700; }
+.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.note { color:var(--muted); font-size:12px; margin-top:10px; }
+.banner { background:color-mix(in srgb, var(--accent) 10%, var(--card)); border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); border-radius:10px; padding:10px 14px; font-size:13px; margin-top:6px; }
+.bar { display:inline-block; width:60px; height:6px; background:var(--border); border-radius:3px; vertical-align:middle; margin-right:6px; }
+.bar i { display:block; height:6px; border-radius:3px; background:var(--accent); }
+footer { color:var(--muted); font-size:12px; text-align:center; margin-top:34px; }
+@media (max-width:760px) {
+  .grid2 { grid-template-columns:1fr; }
+  .chart { height:300px; }
+  .kpi .val { font-size:19px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AI Hedge Fund · Paper Trading</h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="meta"><button id="themeBtn" type="button">Tema</button></div>
+  </header>
+
+  <div id="banner"></div>
+
+  <h2>Panoramica</h2>
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Andamento</h2>
+  <div class="card">
+    <div class="seg" id="viewSeg">
+      <button data-v="rebased" class="on">Base 100</button>
+      <button data-v="value">Valore €</button>
+      <button data-v="dd">Drawdown</button>
+    </div>
+    <div id="equityChart" class="chart"></div>
+    <div class="note" id="equityNote"></div>
+  </div>
+
+  <h2>Confronto metriche</h2>
+  <div class="card scroll"><table id="metricsTable"></table>
+    <div class="note">Rendimenti giornalieri (ultimo valore del giorno). Sharpe/Sortino con risk-free <span id="rf"></span>. Con uno storico breve i valori annualizzati sono solo indicativi.</div>
+  </div>
+
+  <h2>Portafoglio</h2>
+  <div class="card">
+    <div class="seg" id="stratSeg"></div>
+    <div class="grid2">
+      <div id="allocChart" class="chart sm"></div>
+      <div id="sectorChart" class="chart sm"></div>
+    </div>
+    <div class="scroll"><table id="posTable"></table></div>
+  </div>
+
+  <h2>Screener</h2>
+  <div class="card scroll"><table id="screenTable"></table></div>
+
+  <h2>Trade conclusi</h2>
+  <div class="card">
+    <div class="meta" id="tradesSummary" style="margin-bottom:10px"></div>
+    <div class="seg" id="tradeSeg"></div>
+    <div class="scroll"><table id="tradesTable"></table></div>
+  </div>
+
+  <footer>Simulazione di paper trading a scopo didattico — non è consulenza finanziaria.<br>
+  <span id="foot"></span></footer>
+</div>
+
+<script id="payload" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById('payload').textContent);
+const S = D.strategies, order = Object.keys(S);
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const eur = (v, d=2) => v.toLocaleString('it-IT', {minimumFractionDigits:d, maximumFractionDigits:d}) + ' €';
+const pct = (v, d=2, sign=true) => (sign && v > 0 ? '+' : '') + (v*100).toLocaleString('it-IT', {minimumFractionDigits:d, maximumFractionDigits:d}) + '%';
+const num = (v, d=2) => v.toLocaleString('it-IT', {minimumFractionDigits:d, maximumFractionDigits:d});
+const cls = v => v > 0 ? 'pos' : v < 0 ? 'neg' : 'muted';
+const dot = c => `<span class="dot" style="background:${c}"></span>`;
+const BENCH_COLORS = ['#94a3b8', '#64748b'];
+
+/* ---------- header / banner ---------- */
+$('meta').innerHTML = `<span>Aggiornato: <b>${D.generated_at}</b></span><span>Segnali: ${D.signals_updated}</span><span>Sentiment: ${D.sentiment_updated}</span>`;
+$('rf').textContent = pct(D.risk_free, 1, false);
+$('foot').textContent = 'Generato ' + D.generated_at;
+const notes = [];
+if (D.data_quality.repaired_points > 0) {
+  notes.push(`In <b>${D.data_quality.repaired_points}</b> rilevazioni storiche il valore registrato era errato (titoli senza prezzo contati 0 €, cambio USD/EUR di fallback). L'equity è stata <b>ricostruita</b> con prezzi e cambi storici; i file di dati originali non sono stati modificati.`);
+}
+const sg = D.data_quality.signals || {};
+if (sg.fundamentals_real === false) {
+  notes.push('Nessun dato fondamentale reale disponibile (F-score tutti 0,5): la strategia <b>Fundamental</b> sta usando la sua lista fissa di fallback.');
+}
+if (sg.momentum_real === false) {
+  notes.push('Nessun dato di momentum disponibile: la strategia <b>Momentum</b> non sta ordinando per rendimento.');
+}
+$('banner').innerHTML = notes.map(n => `<div class="banner">ℹ️ ${n}</div>`).join('');
+
+/* ---------- KPI cards ---------- */
+function benchStats(b) {
+  const s = b.series, first = s[0][1], last = s[s.length-1][1], prev = s[s.length-2][1];
+  return {ret: last/first - 1, d1: last/prev - 1};
+}
+let kp = '';
+for (const k of order) {
+  const s = S[k], m = s.metrics;
+  kp += `<div class="card kpi" style="--c:${s.color}"><div class="name">${s.label}</div>
+    <div class="val">${eur(m.final, 0)}</div>
+    <div class="sub"><span class="${cls(m.total_return)}">${pct(m.total_return)}</span>
+    <span class="${cls(m.last_day_return)}">1g ${pct(m.last_day_return)}</span></div></div>`;
+}
+Object.values(D.benchmarks).forEach((b, i) => {
+  const st = benchStats(b);
+  kp += `<div class="card kpi bench" style="--c:${BENCH_COLORS[i % 2]}"><div class="name">${b.label} · benchmark</div>
+    <div class="val">${pct(st.ret)}</div>
+    <div class="sub"><span class="muted">dall'inizio</span><span class="${cls(st.d1)}">1g ${pct(st.d1)}</span></div></div>`;
+});
+$('kpis').innerHTML = kp;
+
+/* ---------- equity chart ---------- */
+let view = 'rebased';
+function layoutBase(extra) {
+  return Object.assign({
+    margin: {l:52, r:12, t:8, b:36}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    font: {color: css('--muted'), size: 12},
+    xaxis: {gridcolor: css('--grid'), type:'date'}, yaxis: {gridcolor: css('--grid'), zeroline:false},
+    legend: {orientation:'h', y:-0.18}, hovermode:'x unified'
+  }, extra || {});
+}
+function drawEquity() {
+  const traces = [];
+  for (const k of order) {
+    const s = S[k];
+    let x, y;
+    if (view === 'dd') { x = s.drawdown.map(p => p[0]); y = s.drawdown.map(p => p[1]); }
+    else if (view === 'value') { x = s.equity.map(p => p[0]); y = s.equity.map(p => p[1]); }
+    else { const f = s.equity[0][1]; x = s.equity.map(p => p[0]); y = s.equity.map(p => p[1] / f * 100); }
+    traces.push({x, y, name: s.label, mode:'lines', line:{color:s.color, width:2.2},
+      hovertemplate: view === 'dd' ? '%{y:.2f}%' : view === 'value' ? '%{y:,.0f} €' : '%{y:.1f}'});
+  }
+  if (view === 'rebased') {
+    Object.values(D.benchmarks).forEach((b, i) => {
+      const f = b.series[0][1];
+      traces.push({x:b.series.map(p=>p[0]), y:b.series.map(p=>p[1]/f*100), name:b.label, mode:'lines',
+        line:{color:BENCH_COLORS[i%2], width:1.6, dash:'dot'}, hovertemplate:'%{y:.1f}'});
+    });
+  }
+  const yt = view === 'dd' ? 'Drawdown %' : view === 'value' ? 'Valore €' : 'Base 100';
+  Plotly.react('equityChart', traces, layoutBase({yaxis:{gridcolor:css('--grid'), zeroline:false, title:{text:yt}}}), {displayModeBar:false, responsive:true});
+  $('equityNote').textContent = view === 'rebased'
+    ? 'Tutte le serie partono da 100 alla prima data. Benchmark in valuta di quotazione (SPY in USD): non include l\'effetto cambio.'
+    : '';
+}
+$('viewSeg').addEventListener('click', e => {
+  if (!e.target.dataset.v) return;
+  view = e.target.dataset.v;
+  [...$('viewSeg').children].forEach(b => b.classList.toggle('on', b === e.target));
+  drawEquity();
+});
+
+/* ---------- metrics table ---------- */
+const COLS = [
+  ['Rend. tot.', m => m.total_return, v => pct(v), 1],
+  ['Annualiz.', m => m.ann_return, v => pct(v, 1), 1],
+  ['Volatilità', m => m.ann_vol, v => pct(v, 1, false), -1],
+  ['Sharpe', m => m.sharpe, v => num(v), 1],
+  ['Sortino', m => m.sortino, v => num(v), 1],
+  ['Max DD', m => -m.max_drawdown, v => pct(v, 1), 1],
+  ['DD attuale', m => m.current_drawdown, v => pct(v, 1), 1],
+  ['Calmar', m => m.calmar, v => num(v), 1],
+  ['Giorni +', m => m.win_rate, v => pct(v, 0, false), 1],
+  ['Miglior g.', m => m.best_day, v => pct(v), 1],
+  ['Peggior g.', m => m.worst_day, v => pct(v), 1],
+];
+(function metricsTable() {
+  const rows = order.map(k => ({k, m: S[k].metrics}));
+  let h = '<thead><tr><th>Strategia</th>' + COLS.map(c => `<th>${c[0]}</th>`).join('') + '<th>Costi €</th></tr></thead><tbody>';
+  const best = COLS.map(c => {
+    const vals = rows.map(r => c[1](r.m)); return c[3] > 0 ? Math.max(...vals) : Math.min(...vals);
+  });
+  for (const r of rows) {
+    h += `<tr><td>${dot(S[r.k].color)}${S[r.k].label}</td>` + COLS.map((c, i) => {
+      const v = c[1](r.m);
+      return `<td class="${v === best[i] ? 'best' : ''}">${c[2](v)}</td>`;
+    }).join('') + `<td>${num(S[r.k].fees_paid)}</td></tr>`;
+  }
+  $('metricsTable').innerHTML = h + '</tbody>';
+})();
+
+/* ---------- portfolio ---------- */
+let cur = order[0];
+$('stratSeg').innerHTML = order.map(k => `<button data-k="${k}" class="${k === cur ? 'on' : ''}">${S[k].label}</button>`).join('');
+$('stratSeg').addEventListener('click', e => {
+  if (!e.target.dataset.k) return;
+  cur = e.target.dataset.k;
+  [...$('stratSeg').children].forEach(b => b.classList.toggle('on', b.dataset.k === cur));
+  drawPortfolio();
+});
+function drawPortfolio() {
+  const s = S[cur], pos = s.positions;
+  const labels = pos.map(p => p.ticker).concat(['Cash']), vals = pos.map(p => p.value).concat([s.cash]);
+  const tot = vals.reduce((a, b) => a + b, 0);
+  const text = labels.map((l, i) => vals[i] / tot >= 0.045 ? l : '');
+  Plotly.react('allocChart', [{type:'pie', labels, values:vals, text, hole:.55, textinfo:'text', textposition:'inside', sort:false,
+    marker:{line:{color:css('--card'), width:2}}, hovertemplate:'%{label}: %{value:,.0f} € (%{percent})<extra></extra>'}],
+    {margin:{l:8,r:8,t:28,b:8}, paper_bgcolor:'rgba(0,0,0,0)', font:{color:'#fff', size:11}, showlegend:false,
+     title:{text:'Allocazione (valore €)', font:{size:12, color:css('--muted')}}}, {displayModeBar:false, responsive:true});
+  const sec = {}; pos.forEach(p => sec[p.sector] = (sec[p.sector] || 0) + p.value); sec['Cash'] = s.cash;
+  const sk = Object.keys(sec).sort((a, b) => sec[a] - sec[b]);
+  Plotly.react('sectorChart', [{type:'bar', orientation:'h', y:sk, x:sk.map(k => sec[k]), marker:{color:s.color},
+    hovertemplate:'%{y}: %{x:,.0f} €<extra></extra>'}],
+    {margin:{l:84,r:12,t:24,b:28}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:css('--muted'), size:11},
+     xaxis:{gridcolor:css('--grid')}, title:{text:'Esposizione per settore (€)', font:{size:12}}}, {displayModeBar:false, responsive:true});
+  let h = '<thead><tr><th>Ticker</th><th>Mercato</th><th>Q.tà</th><th>Prezzo medio</th><th>Prezzo att.</th><th>Valore</th><th>Peso</th><th>P&amp;L €</th><th>P&amp;L %</th></tr></thead><tbody>';
+  for (const p of pos) {
+    h += `<tr><td><b>${p.ticker}</b>${p.stale ? ' <span class="muted" title="Prezzo non aggiornato">·</span>' : ''}</td><td>${p.exchange}</td><td>${p.shares}</td><td>${num(p.avg_price)}</td><td>${num(p.price_eur)}</td>
+      <td>${num(p.value)}</td><td>${pct(p.weight, 1, false)}</td><td class="${cls(p.pnl)}">${num(p.pnl)}</td><td class="${cls(p.pnl_pct)}">${(p.pnl_pct > 0 ? '+' : '') + num(p.pnl_pct)}%</td></tr>`;
+  }
+  h += `<tr><td><b>Cash</b></td><td></td><td></td><td></td><td></td><td>${num(s.cash)}</td><td>${pct(s.cash / s.metrics.final, 1, false)}</td><td></td><td></td></tr>`;
+  $('posTable').innerHTML = h + '</tbody>';
+}
+
+/* ---------- screener ---------- */
+(function screener() {
+  let h = '<thead><tr><th>Ticker</th><th>Mercato</th><th>Settore</th><th>Mom. 3m</th><th>F-score</th><th>Sentiment</th><th>Composito</th></tr></thead><tbody>';
+  for (const r of D.screener) {
+    h += `<tr><td><b>${r.ticker}</b></td><td>${r.exchange}</td><td>${r.sector}</td><td class="${cls(r.ret_3m)}">${pct(r.ret_3m, 1)}</td>
+      <td><span class="bar"><i style="width:${r.f_score*100}%"></i></span>${num(r.f_score)}</td>
+      <td class="${cls(r.sent_score)}">${(r.sent_score > 0 ? '+' : '') + num(r.sent_score, 3)} <span class="muted">${r.sent_label}</span></td>
+      <td><span class="bar"><i style="width:${r.composite*100}%"></i></span>${num(r.composite, 3)}</td></tr>`;
+  }
+  $('screenTable').innerHTML = h + '</tbody>';
+})();
+
+/* ---------- trades ---------- */
+let tf = 'all';
+const ts = D.trades_summary;
+$('tradesSummary').innerHTML = `<span>Trade: <b>${ts.count}</b></span><span>Vincenti: <b class="pos">${ts.wins}</b></span><span>Perdenti: <b class="neg">${ts.losses}</b></span><span>P&amp;L realizzato: <b class="${cls(ts.pnl)}">${num(ts.pnl)} €</b></span>`;
+$('tradeSeg').innerHTML = ['all', ...order].map(k => `<button data-k="${k}" class="${k === 'all' ? 'on' : ''}">${k === 'all' ? 'Tutte' : S[k].label}</button>`).join('');
+$('tradeSeg').addEventListener('click', e => {
+  if (!e.target.dataset.k) return;
+  tf = e.target.dataset.k;
+  [...$('tradeSeg').children].forEach(b => b.classList.toggle('on', b.dataset.k === tf));
+  drawTrades();
+});
+const fd = iso => { const d = new Date(iso); return d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}); };
+function drawTrades() {
+  const rows = D.trades.filter(t => tf === 'all' || t.strategy === tf).slice(0, 200);
+  if (!rows.length) { $('tradesTable').innerHTML = '<tbody><tr><td class="muted">Nessun trade concluso.</td></tr></tbody>'; return; }
+  let h = '<thead><tr><th>Strategia</th><th>Ticker</th><th>Entrata</th><th>Uscita</th><th>Q.tà</th><th>Prezzo in</th><th>Prezzo out</th><th>P&amp;L €</th><th>P&amp;L %</th></tr></thead><tbody>';
+  for (const t of rows) {
+    const s = S[t.strategy];
+    h += `<tr><td>${dot(s ? s.color : '#888')}${s ? s.label : t.strategy}</td><td><b>${t.ticker}</b></td><td>${fd(t.date_in)}</td><td>${fd(t.date_out)}</td><td>${t.shares}</td>
+      <td>${num(t.entry_eur)}</td><td>${num(t.exit_eur)}</td><td class="${cls(t.pnl_eur)}">${(t.pnl_eur > 0 ? '+' : '') + num(t.pnl_eur)}</td><td class="${cls(t.pnl_pct)}">${(t.pnl_pct > 0 ? '+' : '') + num(t.pnl_pct)}%</td></tr>`;
+  }
+  $('tradesTable').innerHTML = h + '</tbody>';
+}
+
+/* ---------- theme ---------- */
+function redraw() { drawEquity(); drawPortfolio(); }
+$('themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = css('--bg') === '#0e1420';
+  root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  try { localStorage.setItem('theme', dark ? 'light' : 'dark'); } catch (e) {}
+  redraw();
+});
+try { const t = localStorage.getItem('theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+
+if (order.length) { drawEquity(); drawPortfolio(); drawTrades(); }
+else { $('banner').innerHTML = '<div class="banner">Nessun dato disponibile.</div>'; }
+</script>
+</body>
+</html>

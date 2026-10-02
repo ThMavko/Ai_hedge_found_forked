@@ -96,8 +96,12 @@ def log_iteration_for_strategy(
     transactions: list[dict[str, Any]],
     prices: dict[str, float],
     reasoning: str,
+    extra: dict[str, Any] | None = None,
 ) -> None:
-    """Log iteration for a specific strategy portfolio."""
+    """Log iteration for a specific strategy portfolio.
+
+    `extra` aggiunge campi opzionali alla voce (fx_rates, stale_tickers, fees_eur...).
+    """
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session": session,
@@ -114,5 +118,7 @@ def log_iteration_for_strategy(
         "transactions": transactions,
         "reasoning": reasoning,
     }
+    if extra:
+        entry.update(extra)
     portfolio["iterations_log"].append(entry)
     save_portfolio_for_strategy(strategy_name, portfolio)

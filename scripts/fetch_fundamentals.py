@@ -114,8 +114,16 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(__file__))
     from config import UNIVERSE
 
+    from price_history import load_price_history
+    from signals_utils import merge_fundamentals, momentum_from_history
+
     fundamentals = fetch_all_fundamentals(UNIVERSE)
-    momentum = fetch_momentum(UNIVERSE)
+    # Momentum: prima dallo storico prezzi locale (indipendente da Yahoo), poi yfinance
+    # solo per i ticker che mancano.
+    momentum = momentum_from_history(load_price_history(), UNIVERSE)
+    missing = {t: i for t, i in UNIVERSE.items() if t not in momentum}
+    if missing:
+        momentum.update(fetch_momentum(missing))
 
     signals_path = os.path.join(
         os.path.dirname(__file__), "..", "data", "signals.json"
@@ -126,7 +134,8 @@ if __name__ == "__main__":
     except (FileNotFoundError, json.JSONDecodeError):
         signals = {}
 
-    signals["fundamentals"] = fundamentals
+    # Un fetch fallito non deve cancellare dati reali gia' presenti.
+    signals["fundamentals"] = merge_fundamentals(fundamentals, signals.get("fundamentals", {}))
     signals["momentum"] = momentum
     signals["fundamentals_updated"] = datetime.now(timezone.utc).isoformat()
 

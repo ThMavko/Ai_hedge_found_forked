@@ -1,0 +1,7 @@
+# Dipendenze minime per test e CI (senza torch/transformers).
+pytest>=8
+ruff>=0.6
+requests
+yfinance
+matplotlib
+pandas

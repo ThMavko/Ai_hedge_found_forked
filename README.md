@@ -1,152 +1,132 @@
 # Paper Trading Quant Platform
 
-Piattaforma di Paper Trading multi-mercato con capitale iniziale **3.000 €**, esposta su **NASDAQ**, **NYSE**, **FTSE** e **Borsa Italiana (BIT)**. Integrata con GitHub Actions per esecuzione schedulata e Telegram per notifiche.
+Piattaforma di paper trading multi-mercato e **multi-strategia** con capitale iniziale di **3.000 € per strategia**, su **NASDAQ**, **NYSE**, **FTSE** e **Borsa Italiana (BIT)**. Gira su GitHub Actions (3 sessioni al giorno), notifica su Telegram e pubblica una dashboard interattiva su GitHub Pages.
+
+> Simulazione a scopo didattico. Non è consulenza finanziaria.
+
+---
+
+## Strategie
+
+Ogni strategia ha un portafoglio indipendente in `data/portfolios/<strategia>.json`.
+
+| Strategia | Logica |
+|---|---|
+| `equal_weight` | Pesi uguali su tutti i 20 titoli |
+| `momentum` | Top 10 per rendimento a 3 mesi, pesi uguali |
+| `fundamental` | Pesi proporzionali all'F-score (P/E, ROE, FCF yield, D/E) |
+| `sentiment` | Pesi in base allo score di sentiment (Alpha Vantage + FinBERT) |
+
+`momentum` viene calcolato dallo **storico prezzi locale** (`data/price_history.json`), quindi non dipende da Yahoo Finance. Se i dati fondamentali non sono disponibili, `fundamental` usa una lista fissa di fallback e la dashboard lo segnala.
 
 ---
 
 ## Architettura
 
-### Componenti
-
 | Componente | Ruolo |
 |---|---|
-| `scripts/main_pipeline.py` | Orchestratore principale: prezzo, FX, allocazione, esecuzione |
-| `scripts/portfolio_io.py` | I/O sul file JSON del portafoglio |
-| `scripts/telegram_utils.py` | Notifiche Telegram via HTTP POST (HTML parse mode) |
-| `data/portfolio_history.json` | Archivio persistente del portafoglio (versionato su Git) |
-| `.github/workflows/paper_trading.yml` | CI/CD: 3 sessioni giornaliere + auto-commit |
+| `scripts/main_pipeline.py` | Orchestratore: prezzi, FX, ordini, report, dashboard |
+| `scripts/valuation.py` | Valorizzazione del portafoglio; un prezzo mancante usa l'ultimo noto, mai 0 € |
+| `scripts/metrics.py` | Ricostruzione dell'equity e metriche (Sharpe, Sortino, drawdown, Calmar…) |
+| `scripts/price_history.py` | Storico prezzi/FX/benchmark (`data/price_history.json`), additivo |
+| `scripts/signals_utils.py` | Momentum da storico, stato dei segnali, merge non distruttivo |
+| `scripts/dashboard_data.py` | Costruisce il payload JSON della dashboard |
+| `scripts/dashboard_generator.py` | Scrive `docs/index.html` e `docs/data.json` |
+| `scripts/templates/dashboard.html` | Template della dashboard (Plotly) |
+| `scripts/backfill_history.py` | Backfill locale di prezzi, FX e benchmark |
+| `scripts/telegram_utils.py` | Notifiche Telegram |
+| `web/` | Dashboard live opzionali (Flask su Render, Streamlit) |
 
-### Flusso di esecuzione
+### Flusso di una sessione
 
-1. GitHub Actions attiva il workflow al trigger `schedule` (3 volte al giorno)
-2. Si determina l'ora locale italiana via `TZ=Europe/Rome`
-3. La pipeline carica lo stato corrente del portafoglio da `portfolio_history.json`
-4. Recupera i prezzi via **Tiingo API** e i tassi FX via **Alpha Vantage API**
-5. Calcola l'allocazione target (equal-weight su 15 ticker)
-6. Applica il **filtro anti-costi del 5%**
-7. Esegue ordini BUY/SELL a lotti interi (no frazioni)
-8. Salva lo storico e invia notifica Telegram
-9. Git committa e pusha automaticamente il JSON aggiornato
+1. GitHub Actions avvia il workflow (mattina / pomeriggio / sera, lun-ven).
+2. Prezzi: **Tiingo** (USA) → **Alpha Vantage** (Europa) → **yfinance**, con cache giornaliera.
+3. Cambi: **Frankfurter** (BCE, gratuito) → Alpha Vantage → fallback statico.
+4. Ogni strategia calcola i pesi target e ribilancia (soglia 5%, lotti interi, costi simulati).
+5. Si aggiornano lo storico prezzi e i benchmark, poi si salvano portafogli, report Telegram e dashboard.
+6. Il bot committa i file aggiornati.
 
----
+### Gestione del rischio e realismo
 
-## Sessioni di trading
-
-| Sessione | Ora IT (winter) | Ora IT (summer) | Descrizione |
-|---|---|---|---|
-| **Mattina** | 08:15 | 09:15 | Apertura mercati EU, pre-apertura US |
-| **Pomeriggio** | 17:15 | 18:15 | Trading intraday US |
-| **Sera** | 22:30 | 23:30 | Chiusura US, report di fine giornata |
-
-Le notifiche Telegram:
-
-- **Sera**: report completo sempre inviato
-- **Mattina / Pomeriggio**: notifica SOLO se ci sono state transazioni reali (BUY/SELL)
+- **Soglia di ribilanciamento 5%**: nessun ordine se lo scostamento dal peso target è inferiore.
+- **Lotti interi**: nessuna frazione di azione.
+- **Costi di transazione**: `TRANSACTION_COST_BPS` in `scripts/config.py` (default 10 bps su ogni ordine). Sono registrati in `fee_eur` per ogni transazione e in `metadata.fees_paid`. Valgono solo per i nuovi trade.
+- **Prezzi mancanti**: i titoli senza prezzo non vengono scambiati e restano valorizzati all'ultimo prezzo noto.
 
 ---
 
-## Gestione del rischio
+## Dashboard
 
-### Filtro anti-costi (5%)
+`docs/index.html` è una pagina autosufficiente (dati incorporati, grafici Plotly da CDN): si apre anche da file locale. Contiene:
 
-Nessuna operazione viene eseguita se lo scostamento tra peso target e peso reale è inferiore al **5%**. Questo previene il _whipsaw_ da micro-ribilanciamenti che genererebbero costi di transazione fittizi.
+- **KPI** per strategia e per benchmark (MSCI World in EUR via `SWDA.MI`, S&P 500 via `SPY`);
+- **Equity curve interattiva** in Base 100, in valore € o come drawdown;
+- **Confronto metriche**: rendimento, annualizzato, volatilità, Sharpe, Sortino, max drawdown, Calmar, % giorni positivi, costi;
+- **Portafoglio** per strategia: allocazione, esposizione per settore, posizioni con P&L;
+- **Screener** (momentum, F-score, sentiment, punteggio composito);
+- **Trade conclusi** con filtro per strategia;
+- tema chiaro/scuro e layout mobile.
 
-### Arrotondamento a lotti interi
+Le stesse informazioni sono in `docs/data.json`. Per GitHub Pages: Settings → Pages → sorgente `docs/`.
 
-Tutti gli ordini BUY/SELL sono arrotondati per difetto al numero intero di azioni. Nessuna frazione di azione viene mai acquistata o venduta.
+### Nota sui dati storici
 
-### Conversione valute
-
-I prezzi in USD e GBP vengono convertiti in EUR tramite tassi FX live (Alpha Vantage) prima di ogni calcolo di portafoglio.
+Fino al 30/09/2026 i 5 titoli di Borsa Italiana risultavano spesso senza prezzo e venivano contati **0 €** nel totale, e quando Alpha Vantage non rispondeva il cambio USD/EUR cadeva su un fallback statico (0,92 contro ~0,89 reale). Il totale registrato nei JSON ha quindi falsi crolli e picchi. Il codice ora corregge il problema in avanti (`valuation.py`, FX affidabile) e la dashboard **ricostruisce** l'equity storica con i prezzi e i cambi reali (`metrics.build_equity_series`). I file in `data/portfolios/` non vengono mai modificati.
 
 ---
 
 ## Setup
 
-### 1. Prerequisiti
+### Prerequisiti
 
 - Python 3.10+
-- Repository GitHub privato
-- API key per:
-  - [Tiingo](https://www.tiingo.com/) (prezzi azionari)
-  - [Alpha Vantage](https://www.alphavantage.co/) (tassi di cambio)
-  - [Telegram Bot](https://core.telegram.org/bots#6-botfather) (notifiche)
+- API key per [Tiingo](https://www.tiingo.com/), [Alpha Vantage](https://www.alphavantage.co/) e un bot [Telegram](https://core.telegram.org/bots#6-botfather)
 
-### 2. GitHub Secrets
-
-Imposta i seguenti segreti nella repository GitHub:
+### GitHub Secrets
 
 | Secret | Descrizione |
 |---|---|
-| `TIINGO_API_KEY` | API key per Tiingo |
-| `ALPHA_VANTAGE_KEY` | API key per Alpha Vantage |
-| `TELEGRAM_TOKEN` | Token del bot Telegram (da @BotFather) |
-| `TELEGRAM_CHAT_ID` | Chat ID dove ricevere le notifiche |
+| `TIINGO_API_KEY` | Prezzi azionari USA e benchmark |
+| `ALPHA_VANTAGE_KEY` | Prezzi europei, sentiment, FX di riserva |
+| `TELEGRAM_TOKEN` | Token del bot |
+| `TELEGRAM_CHAT_ID` | Chat di destinazione |
 
-### 3. Esecuzione locale
+### Esecuzione locale
 
 ```bash
-# Clona la repo
-git clone <repo-url>
-cd paper-trading-quant
+pip install -r requirements.txt
 
-# Imposta variabili d'ambiente
-export TIINGO_API_KEY=your_key
-export ALPHA_VANTAGE_KEY=your_key
-export TELEGRAM_TOKEN=your_token
-export TELEGRAM_CHAT_ID=your_chat_id
+# Una sessione (7 = mattina, 15 = pomeriggio, 21 = sera)
+python scripts/main_pipeline.py --hour 21
 
-# Installa dipendenze
-pip install pandas requests yfinance
+# Backfill di prezzi, FX e benchmark (richiede accesso a Yahoo Finance)
+python scripts/backfill_history.py --start 2026-06-01
 
-# Esegui una sessione
-python scripts/main_pipeline.py --hour 7    # mattina
-python scripts/main_pipeline.py --hour 15   # pomeriggio
-python scripts/main_pipeline.py --hour 21   # sera
+# Dati fondamentali e momentum
+python scripts/fetch_fundamentals.py
 ```
 
-### 4. Attivazione su GitHub Actions
+### Test e lint
 
-Dopo aver pushato la repository su GitHub, assicurati che **Actions** sia abilitato. Il workflow si attiverà automaticamente agli orari schedulati (UTC) dal lunedì al venerdì.
+```bash
+pip install -r requirements-test.txt
+ruff check scripts tests
+pytest -q
+```
 
-### 5. Dashboard interattiva
-
-Ad ogni iterazione viene generata una **dashboard HTML professionale** in `docs/index.html` con:
-
-- **Metriche istituzionali**: Sharpe ratio, Max Drawdown, Calmar Ratio, Win Rate, Profit Factor
-- **Equity Curve** interattiva (Plotly) con overlay della cassa
-- **Asset Allocation** treemap
-- **Sector Exposure** a barre
-- **Drawdown chart**
-- **Distribuzione dei rendimenti giornalieri**
-- **PnL per singolo asset**
-- **Tabella posizioni** con PnL assoluto e percentuale
-- **Storico transazioni**
-
-Per visualizzarla:
-- **GitHub Pages**: vai su Settings → Pages → sorgente `docs/` → salva. Poi visita `https://<user>.github.io/<repo>/`
-- **Locale**: apri `docs/index.html` nel browser
+La CI (`.github/workflows/ci.yml`) esegue gli stessi controlli su ogni pull request.
 
 ---
 
 ## Universo dei ticker
 
-### NASDAQ
-AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA
-
-### NYSE
-JPM, JNJ, V, KO
-
-### FTSE (London)
-ULVR.L, HSBA.L, BP.L, GSK.L, RIO.L
-
-### Borsa Italiana (BIT)
-ENI.MI, ISP.MI, ENEL.MI, LDO.MI, MONC.MI
-
----
+- **NASDAQ**: AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA
+- **NYSE**: JPM, JNJ, V, KO
+- **FTSE**: ULVR.L, HSBA.L, BP.L, GSK.L, RIO.L
+- **Borsa Italiana**: ENI.MI, ISP.MI, ENEL.MI, LDO.MI, MONC.MI
 
 ## Manutenzione
 
-- **Reset del portafoglio**: sostituisci `data/portfolio_history.json` con il contenuto iniziale
-- **Modifica ticker**: aggiorna `UNIVERSE` in `scripts/main_pipeline.py`
-- **Cambio orari**: modifica i cron expressions in `.github/workflows/paper_trading.yml`
+- **Modificare i ticker o i parametri**: `scripts/config.py` (`UNIVERSE`, `TRANSACTION_COST_BPS`, `RISK_FREE_RATE`, `BENCHMARKS`).
+- **Cambiare gli orari**: cron in `.github/workflows/paper_trading.yml`.
+- **Reset di una strategia**: sostituire `data/portfolios/<strategia>.json` con un portafoglio iniziale (storico escluso dal reset: `data/price_history.json` si mantiene).

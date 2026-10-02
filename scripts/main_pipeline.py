@@ -10,7 +10,15 @@ import requests
 # Ensure scripts/ directory is on the path so config and strategies are importable
 sys.path.insert(0, os.path.dirname(__file__))
 
-from config import UNIVERSE, STRATEGIES, INITIAL_CAPITAL, REBALANCE_THRESHOLD
+from config import (
+    UNIVERSE,
+    STRATEGIES,
+    INITIAL_CAPITAL,
+    REBALANCE_THRESHOLD,
+    TRANSACTION_COST_BPS,
+    FX_FALLBACK,
+    BENCHMARKS,
+)
 from fetch_prices import get_prices
 from portfolio_io import (
     load_portfolio,
@@ -20,7 +28,15 @@ from portfolio_io import (
 )
 from telegram_utils import send_telegram_message, send_telegram_photo
 from chart_utils import generate_dashboard
-from dashboard_generator import build_html
+from valuation import mark_to_market
+from price_history import (
+    load_price_history,
+    record_prices,
+    record_fx,
+    refresh_benchmarks,
+)
+from signals_utils import enrich_signals
+from dashboard_generator import write_dashboard
 
 from strategies import (
     EqualWeightStrategy,
@@ -44,29 +60,56 @@ STRATEGY_INSTANCES = {
 # ---------------------------------------------------------------------------
 
 
-def fetch_fx_rate(base: str, quote: str = "EUR") -> float:
-    if base == "GBp":
-        return fetch_fx_rate("GBP", quote) / 100
-    if base == quote:
-        return 1.0
-    url = "https://www.alphavantage.co/query"
-    params = {
-        "function": "CURRENCY_EXCHANGE_RATE",
-        "from_currency": base,
-        "to_currency": quote,
-        "apikey": AV_KEY,
-    }
+def _fetch_fx_frankfurter(base: str, quote: str) -> float | None:
+    """Tasso BCE gratuito e senza chiave (frankfurter.app). None se non disponibile."""
     try:
-        resp = requests.get(url, params=params, timeout=15)
+        resp = requests.get(
+            "https://api.frankfurter.app/latest",
+            params={"from": base, "to": quote},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return float(resp.json()["rates"][quote])
+    except (requests.RequestException, KeyError, ValueError, TypeError) as e:
+        print(f"[WARN] Frankfurter FX failed {base}->{quote}: {e}")
+        return None
+
+
+def _fetch_fx_alpha_vantage(base: str, quote: str) -> float | None:
+    if not AV_KEY:
+        return None
+    try:
+        resp = requests.get(
+            "https://www.alphavantage.co/query",
+            params={
+                "function": "CURRENCY_EXCHANGE_RATE",
+                "from_currency": base,
+                "to_currency": quote,
+                "apikey": AV_KEY,
+            },
+            timeout=15,
+        )
         resp.raise_for_status()
         data = resp.json()
         key = "Realtime Currency Exchange Rate"
         if key in data:
             return float(data[key]["5. Exchange Rate"])
     except (requests.RequestException, KeyError, ValueError, TypeError) as e:
-        print(f"[WARN] FX fetch failed {base}->{quote}: {e}. Using fallback.")
-    fallback_rates = {"USD": 0.92, "GBP": 1.17, "GBp": 0.0117}
-    return fallback_rates.get(base, 1.0)
+        print(f"[WARN] Alpha Vantage FX failed {base}->{quote}: {e}")
+    return None
+
+
+def fetch_fx_rate(base: str, quote: str = "EUR") -> float:
+    """Catena: Frankfurter (BCE, illimitato) -> Alpha Vantage (25 req/giorno) -> fallback."""
+    if base == "GBp":
+        return fetch_fx_rate("GBP", quote) / 100
+    if base == quote:
+        return 1.0
+    rate = _fetch_fx_frankfurter(base, quote) or _fetch_fx_alpha_vantage(base, quote)
+    if rate:
+        return rate
+    print(f"[WARN] FX {base}->{quote}: uso il fallback statico.")
+    return FX_FALLBACK.get(base, 1.0)
 
 
 def convert_to_eur(amount: float, currency: str, fx_rates: dict | None = None) -> float:
@@ -128,26 +171,17 @@ def run_strategy_pipeline(
     portfolio = load_portfolio_for_strategy(strategy_name)
     tickers = list(UNIVERSE.keys())
 
-    # --- Compute portfolio value ---
-    portfolio_value_eur = 0.0
-    position_values_eur = {}
-    for ticker in tickers:
-        price_local = prices.get(ticker, 0)
-        currency = UNIVERSE[ticker]["currency"]
-        price_eur = price_local * fx_rates.get(currency, 1.0)
-        pos = portfolio["current_positions"].get(ticker, {})
-        shares = pos.get("shares", 0)
-        # For tickers with fallback price, use avg_price (cost basis in EUR) to avoid
-        # inflation from a generic 100 EUR fallback on cheap stocks in large lots.
-        if ticker in failed_tickers:
-            pos_val_eur = pos.get("avg_price", price_eur) * shares
-        else:
-            pos_val_eur = price_eur * shares
-        position_values_eur[ticker] = pos_val_eur
-        portfolio_value_eur += pos_val_eur
-
+    # --- Compute portfolio value (ticker senza prezzo live: ultimo prezzo noto) ---
+    portfolio_value_eur, position_values_eur = mark_to_market(
+        portfolio, prices, fx_rates, UNIVERSE, stale=failed_tickers
+    )
     cash_eur = portfolio["metadata"]["current_cash"]
-    portfolio_value_eur += cash_eur
+    fee_rate = TRANSACTION_COST_BPS / 10000.0
+    fees_eur = 0.0
+    log_extra = {
+        "fx_rates": {k: round(v, 6) for k, v in fx_rates.items()},
+        "stale_tickers": sorted(failed_tickers),
+    }
 
     all_failed = len(failed_tickers) >= len(tickers)
     if all_failed:
@@ -164,6 +198,7 @@ def run_strategy_pipeline(
             [],
             prices,
             msg,
+            extra=log_extra,
         )
         return {
             "total_value_eur": portfolio_value_eur,
@@ -222,7 +257,7 @@ def run_strategy_pipeline(
             if price_eur <= 0:
                 reasoning_parts.append(f"{ticker}: BUY skipped (price=0)")
                 continue
-            max_shares = math.floor(cash_eur / price_eur)
+            max_shares = math.floor(cash_eur / (price_eur * (1 + fee_rate)))
             if max_shares <= 0:
                 reasoning_parts.append(
                     f"{ticker}: BUY skipped (1 share @ {price_eur:.2f}EUR > cash {cash_eur:.2f}EUR)"
@@ -231,6 +266,8 @@ def run_strategy_pipeline(
             needed_shares = max(1, math.floor(diff_eur / price_eur))
             shares_to_trade = min(needed_shares, max_shares)
             cost = shares_to_trade * price_eur
+            fee = cost * fee_rate
+            fees_eur += fee
             entry = portfolio["current_positions"].get(
                 ticker, {"shares": 0, "avg_price": 0.0}
             )
@@ -242,7 +279,7 @@ def run_strategy_pipeline(
                 if total_shares > 0
                 else 0,
             }
-            cash_eur -= cost
+            cash_eur -= cost + fee
             portfolio["metadata"]["current_cash"] = round(cash_eur, 2)
             transactions.append(
                 {
@@ -251,6 +288,7 @@ def run_strategy_pipeline(
                     "shares": shares_to_trade,
                     "price_eur": round(price_eur, 4),
                     "total_cost_eur": round(cost, 2),
+                    "fee_eur": round(fee, 4),
                 }
             )
             reasoning_parts.append(
@@ -275,10 +313,12 @@ def run_strategy_pipeline(
                 reasoning_parts.append(f"{ticker}: SELL skipped (lot < 1 share)")
                 continue
             proceeds = shares_to_sell * price_eur
+            fee = proceeds * fee_rate
+            fees_eur += fee
             portfolio["current_positions"][ticker]["shares"] -= shares_to_sell
             if portfolio["current_positions"][ticker]["shares"] <= 0:
                 del portfolio["current_positions"][ticker]
-            cash_eur += proceeds
+            cash_eur += proceeds - fee
             portfolio["metadata"]["current_cash"] = round(cash_eur, 2)
             transactions.append(
                 {
@@ -287,6 +327,7 @@ def run_strategy_pipeline(
                     "shares": shares_to_sell,
                     "price_eur": round(price_eur, 4),
                     "total_proceeds_eur": round(proceeds, 2),
+                    "fee_eur": round(fee, 4),
                 }
             )
             reasoning_parts.append(
@@ -297,13 +338,13 @@ def run_strategy_pipeline(
         else:
             reasoning_parts.append(f"{ticker}: HOLD (on target)")
 
-    # Recalculate total after trades
+    # Recalculate total after trades (stessa valorizzazione della fase pre-trade)
+    if fees_eur:
+        meta = portfolio["metadata"]
+        meta["fees_paid"] = round(meta.get("fees_paid", 0.0) + fees_eur, 4)
     cash_eur = portfolio["metadata"]["current_cash"]
-    total_value_eur = cash_eur + sum(
-        prices.get(t, 0)
-        * fx_rates.get(UNIVERSE[t]["currency"], 1.0)
-        * portfolio["current_positions"].get(t, {}).get("shares", 0)
-        for t in tickers
+    total_value_eur, _ = mark_to_market(
+        portfolio, prices, fx_rates, UNIVERSE, stale=failed_tickers
     )
 
     reasoning = "\n".join(reasoning_parts)
@@ -315,6 +356,7 @@ def run_strategy_pipeline(
         transactions,
         prices,
         reasoning,
+        extra={**log_extra, "fees_eur": round(fees_eur, 4)},
     )
 
     return {
@@ -342,6 +384,12 @@ def run_pipeline(session_label: str) -> float:
 
     # Fetch prices: investing.com (investiny) → yfinance bulk fallback
     prices, failed_tickers = get_prices(tickers, UNIVERSE)
+    try:
+        record_prices({t: p for t, p in prices.items() if t not in failed_tickers})
+        added = refresh_benchmarks(list(BENCHMARKS), default_start="2026-06-01")
+        print(f"[INFO] Benchmark history: +{added} points")
+    except Exception as e:
+        print(f"[WARN] price history update failed: {e}")
 
     # Fetch FX rates once
     fx_rates = {}
@@ -352,10 +400,15 @@ def run_pipeline(session_label: str) -> float:
         else:
             fx_rates[c] = 1.0
         print(f"  FX {c}/EUR = {fx_rates[c]:.4f}")
+    try:
+        record_fx(fx_rates)
+    except Exception as e:
+        print(f"[WARN] FX history update failed: {e}")
 
     # Load signals (may be empty if market_analysis hasn't run yet)
-    signals = load_signals()
+    signals = enrich_signals(load_signals(), load_price_history(), UNIVERSE)
     print(f"[INFO] Signals loaded — keys: {list(signals.keys())}")
+    print(f"[INFO] Signals status: {signals['status']}")
 
     # --- Run each strategy ---
     strategy_results = {}
@@ -433,6 +486,7 @@ def run_pipeline(session_label: str) -> float:
         primary["portfolio"],
         prices,
         failed_tickers=failed_tickers,
+        fx_rates=fx_rates,
     )
     send_telegram_message(report, session=session_label, has_trades=has_any_trades)
 
@@ -476,12 +530,7 @@ def run_pipeline(session_label: str) -> float:
             for sname, result in strategy_results.items()
             if result
         }
-        html = build_html(all_portfolios, signals)
-        docs_dir = os.path.join(os.path.dirname(__file__), "..", "docs")
-        os.makedirs(docs_dir, exist_ok=True)
-        html_path = os.path.join(docs_dir, "index.html")
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(html)
+        html_path = write_dashboard(all_portfolios, signals)
         print(f"[OK] Dashboard HTML saved: {html_path}")
     except Exception as e:
         print(f"[WARN] Dashboard HTML generation failed: {e}")
@@ -497,11 +546,13 @@ def run_pipeline(session_label: str) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _position_pnl_line(ticker: str, entry: dict, prices: dict) -> str:
+def _position_pnl_line(
+    ticker: str, entry: dict, prices: dict, fx_rates: dict | None = None
+) -> str:
     """Format a position with buy price, current price and unrealized P&L."""
     cur_price = prices.get(ticker, entry["avg_price"])
     currency = UNIVERSE.get(ticker, {}).get("currency", "EUR")
-    fx = 0.0117 if currency == "GBp" else (0.92 if currency == "USD" else (1.17 if currency == "GBP" else 1.0))
+    fx = (fx_rates or {}).get(currency) or FX_FALLBACK.get(currency, 1.0)
     cur_eur = cur_price * fx
     avg_eur = entry["avg_price"]
     shares = entry["shares"]
@@ -534,6 +585,7 @@ def build_telegram_report(
     primary_portfolio: dict,
     prices: dict,
     failed_tickers: set = None,
+    fx_rates: dict | None = None,
 ) -> str:
     TELEGRAM_LIMIT = 4000
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -660,7 +712,9 @@ def build_telegram_report(
             lines.append("  solo cash")
         else:
             for ticker in sorted(pos.keys()):
-                lines.append(_position_pnl_line(ticker, pos[ticker], display_prices))
+                lines.append(
+                    _position_pnl_line(ticker, pos[ticker], display_prices, fx_rates)
+                )
     lines.append("")
 
     lines.append("Aggiornato: {}".format(timestamp))
