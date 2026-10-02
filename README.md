@@ -1,152 +1,126 @@
-# Paper Trading Quant Platform
+# AI Hedge Fund — Paper Trading Quant Platform
 
-Piattaforma di Paper Trading multi-mercato con capitale iniziale **3.000 €**, esposta su **NASDAQ**, **NYSE**, **FTSE** e **Borsa Italiana (BIT)**. Integrata con GitHub Actions per esecuzione schedulata e Telegram per notifiche.
+Piattaforma di paper trading multi-strategia con capitale iniziale di **3.000 €** per strategia,
+su 20 titoli di **NASDAQ**, **NYSE**, **FTSE** e **Borsa Italiana**. Gira su GitHub Actions
+(nessun server) e notifica su Telegram. Nessun denaro reale è coinvolto.
 
----
+## Strategie
+
+Tutte implementano `BaseStrategy.compute_weights(universe, prices, signals) -> {ticker: peso}`.
+
+| Strategia | Idea | Segnali usati | Live |
+|---|---|---|:-:|
+| `equal_weight` | 1/N su tutto l'universo | – | ✅ |
+| `momentum` | top 10 per rendimento a 3 mesi | `momentum.return_3m` | ✅ |
+| `fundamental` | pesi proporzionali all'F-score (P/E, ROE, FCF, D/E) | `fundamentals.f_score` | ✅ |
+| `sentiment` | pesi da sentiment news (Alpha Vantage + FinBERT) | `sentiment.score` | ✅ |
+| `trend_momentum` | momentum, ma solo sopra la media mobile a 200gg; altrimenti cassa | `momentum`, `trend` | solo backtest |
+| `inverse_volatility` | peso ∝ 1/volatilità (risk-parity semplificato) | `volatility.vol_60d` | solo backtest |
+
+Le ultime due sono disponibili nel codice e nel backtest, ma non sono ancora registrate in
+`STRATEGIES` (`scripts/config.py`): farlo crea un nuovo portafoglio live e va deciso consapevolmente.
+Aggiungere una strategia = una classe in `scripts/strategies/` + export in `__init__.py`.
 
 ## Architettura
 
-### Componenti
-
-| Componente | Ruolo |
+| File | Ruolo |
 |---|---|
-| `scripts/main_pipeline.py` | Orchestratore principale: prezzo, FX, allocazione, esecuzione |
-| `scripts/portfolio_io.py` | I/O sul file JSON del portafoglio |
-| `scripts/telegram_utils.py` | Notifiche Telegram via HTTP POST (HTML parse mode) |
-| `data/portfolio_history.json` | Archivio persistente del portafoglio (versionato su Git) |
-| `.github/workflows/paper_trading.yml` | CI/CD: 3 sessioni giornaliere + auto-commit |
+| `scripts/main_pipeline.py` | Orchestratore: prezzi, FX, ordini per strategia, report |
+| `scripts/fetch_prices.py` | Prezzi: Tiingo (US) → Alpha Vantage (EU) → yfinance, con cache giornaliera |
+| `scripts/fetch_fundamentals.py`, `fetch_sentiment.py` | Calcolo segnali → `data/signals.json` |
+| `scripts/portfolio_io.py` | Lettura/scrittura dei portafogli JSON in `data/portfolios/` |
+| `scripts/market_note.py` | Nota di mercato nel report Telegram (vedi sotto) |
+| `scripts/metrics.py` | Metriche di performance (Sharpe, Sortino, drawdown, CAGR, Calmar) |
+| `scripts/backtest.py` | Backtest storico con benchmark |
+| `scripts/dashboard_generator.py`, `web/` | Dashboard HTML statica (`docs/`) e app Streamlit/Flask |
 
-### Flusso di esecuzione
+### Workflow
 
-1. GitHub Actions attiva il workflow al trigger `schedule` (3 volte al giorno)
-2. Si determina l'ora locale italiana via `TZ=Europe/Rome`
-3. La pipeline carica lo stato corrente del portafoglio da `portfolio_history.json`
-4. Recupera i prezzi via **Tiingo API** e i tassi FX via **Alpha Vantage API**
-5. Calcola l'allocazione target (equal-weight su 15 ticker)
-6. Applica il **filtro anti-costi del 5%**
-7. Esegue ordini BUY/SELL a lotti interi (no frazioni)
-8. Salva lo storico e invia notifica Telegram
-9. Git committa e pusha automaticamente il JSON aggiornato
+- `paper_trading.yml` — 3 sessioni al giorno nei giorni feriali; committa i JSON aggiornati.
+- `market_analysis.yml` — ogni mattina aggiorna `data/signals.json` (fondamentali, momentum, sentiment).
+- `backtest.yml` — manuale o mensile: rigenera `docs/backtest.{md,json,png}`.
+- `ci.yml` — su ogni push/PR: `ruff` + `pytest`.
 
----
+### Regole di esecuzione ordini
 
-## Sessioni di trading
+1. Peso target dalla strategia → valore target in EUR.
+2. **Filtro anti-costi**: nessun ordine se lo scostamento dal target è < 5% del portafoglio.
+3. **Lotti interi**: acquisti/vendite arrotondati per difetto a un numero intero di azioni.
+4. I prezzi USD/GBP/GBp sono convertiti in EUR con il cambio live.
+5. Se il prezzo di un titolo non è disponibile (fallback), per quel titolo il trading è sospeso.
 
-| Sessione | Ora IT (winter) | Ora IT (summer) | Descrizione |
-|---|---|---|---|
-| **Mattina** | 08:15 | 09:15 | Apertura mercati EU, pre-apertura US |
-| **Pomeriggio** | 17:15 | 18:15 | Trading intraday US |
-| **Sera** | 22:30 | 23:30 | Chiusura US, report di fine giornata |
+## Backtest
 
-Le notifiche Telegram:
+```bash
+pip install -r requirements-dev.txt
+python scripts/backtest.py --years 5          # scrive docs/backtest.{md,json,png}
+```
 
-- **Sera**: report completo sempre inviato
-- **Mattina / Pomeriggio**: notifica SOLO se ci sono state transazioni reali (BUY/SELL)
+Confronta le strategie con **SPY** e **FTSE MIB** (buy & hold), in EUR, con ribilanciamento
+mensile e costi di transazione (default 10 bps sul turnover).
 
----
+Limiti dichiarati:
 
-## Gestione del rischio
+- Sono testate solo le strategie con segnali ricostruibili dai prezzi *point-in-time*
+  (`equal_weight`, `momentum`, `trend_momentum`, `inverse_volatility`). `fundamental` e `sentiment`
+  non hanno uno storico gratuito affidabile: includerle darebbe look-ahead bias.
+- Azioni frazionarie (il live usa lotti interi), cassa a rendimento zero, nessuna imposta.
+- Il paniere è quello attuale (survivorship bias).
 
-### Filtro anti-costi (5%)
+I risultati dell'ultima esecuzione sono in [`docs/backtest.md`](docs/backtest.md), se già generati.
 
-Nessuna operazione viene eseguita se lo scostamento tra peso target e peso reale è inferiore al **5%**. Questo previene il _whipsaw_ da micro-ribilanciamenti che genererebbero costi di transazione fittizi.
+## Nota di mercato su Telegram
 
-### Arrotondamento a lotti interi
+Il report include una breve nota con migliore/peggiore strategia, operazioni del giorno,
+sentiment e momentum più forti. **Di default è un template deterministico: nessuna AI, nessuna API
+key, nessun costo.**
 
-Tutti gli ordini BUY/SELL sono arrotondati per difetto al numero intero di azioni. Nessuna frazione di azione viene mai acquistata o venduta.
-
-### Conversione valute
-
-I prezzi in USD e GBP vengono convertiti in EUR tramite tassi FX live (Alpha Vantage) prima di ogni calcolo di portafoglio.
-
----
+Opzionale: farla riscrivere da un LLM con un endpoint compatibile OpenAI (anche locale, es. Ollama).
+Si attiva solo se sono impostate `LLM_BASE_URL` e `LLM_MODEL` (`LLM_API_KEY` solo se serve).
+Se l'LLM non risponde, si torna al template.
 
 ## Setup
 
-### 1. Prerequisiti
+### Secret GitHub
 
-- Python 3.10+
-- Repository GitHub privato
-- API key per:
-  - [Tiingo](https://www.tiingo.com/) (prezzi azionari)
-  - [Alpha Vantage](https://www.alphavantage.co/) (tassi di cambio)
-  - [Telegram Bot](https://core.telegram.org/bots#6-botfather) (notifiche)
+| Secret | Uso | Obbligatorio |
+|---|---|:-:|
+| `TIINGO_API_KEY` | prezzi US (free tier) | consigliato |
+| `ALPHA_VANTAGE_KEY` | prezzi EU, FX, news sentiment (free tier) | consigliato |
+| `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | notifiche | no |
+| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | nota riscritta da LLM | no |
 
-### 2. GitHub Secrets
-
-Imposta i seguenti segreti nella repository GitHub:
-
-| Secret | Descrizione |
-|---|---|
-| `TIINGO_API_KEY` | API key per Tiingo |
-| `ALPHA_VANTAGE_KEY` | API key per Alpha Vantage |
-| `TELEGRAM_TOKEN` | Token del bot Telegram (da @BotFather) |
-| `TELEGRAM_CHAT_ID` | Chat ID dove ricevere le notifiche |
-
-### 3. Esecuzione locale
+### Esecuzione locale
 
 ```bash
-# Clona la repo
-git clone <repo-url>
-cd paper-trading-quant
-
-# Imposta variabili d'ambiente
-export TIINGO_API_KEY=your_key
-export ALPHA_VANTAGE_KEY=your_key
-export TELEGRAM_TOKEN=your_token
-export TELEGRAM_CHAT_ID=your_chat_id
-
-# Installa dipendenze
-pip install pandas requests yfinance
-
-# Esegui una sessione
-python scripts/main_pipeline.py --hour 7    # mattina
-python scripts/main_pipeline.py --hour 15   # pomeriggio
-python scripts/main_pipeline.py --hour 21   # sera
+pip install -r requirements.txt        # include torch/transformers per FinBERT
+export TIINGO_API_KEY=... ALPHA_VANTAGE_KEY=... TELEGRAM_TOKEN=... TELEGRAM_CHAT_ID=...
+python scripts/main_pipeline.py --hour 7     # 7 = mattina, 15 = pomeriggio, 21 = sera
 ```
 
-### 4. Attivazione su GitHub Actions
+### Sviluppo
 
-Dopo aver pushato la repository su GitHub, assicurati che **Actions** sia abilitato. Il workflow si attiverà automaticamente agli orari schedulati (UTC) dal lunedì al venerdì.
+```bash
+pip install -r requirements-dev.txt    # leggero: niente torch
+ruff check scripts tests
+pytest
+```
 
-### 5. Dashboard interattiva
+I test coprono pesi delle strategie, metriche, motore di backtest (incluso l'assenza di look-ahead
+nei segnali), regole di esecuzione ordini e nota di mercato.
 
-Ad ogni iterazione viene generata una **dashboard HTML professionale** in `docs/index.html` con:
+### Dashboard
 
-- **Metriche istituzionali**: Sharpe ratio, Max Drawdown, Calmar Ratio, Win Rate, Profit Factor
-- **Equity Curve** interattiva (Plotly) con overlay della cassa
-- **Asset Allocation** treemap
-- **Sector Exposure** a barre
-- **Drawdown chart**
-- **Distribuzione dei rendimenti giornalieri**
-- **PnL per singolo asset**
-- **Tabella posizioni** con PnL assoluto e percentuale
-- **Storico transazioni**
+`docs/index.html` è generata a ogni sessione. Per pubblicarla: Settings → Pages → sorgente `docs/`.
 
-Per visualizzarla:
-- **GitHub Pages**: vai su Settings → Pages → sorgente `docs/` → salva. Poi visita `https://<user>.github.io/<repo>/`
-- **Locale**: apri `docs/index.html` nel browser
+## Universo
 
----
+NASDAQ: AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA · NYSE: JPM, JNJ, V, KO ·
+FTSE: ULVR.L, HSBA.L, BP.L, GSK.L, RIO.L · BIT: ENI.MI, ISP.MI, ENEL.MI, LDO.MI, MONC.MI
 
-## Universo dei ticker
-
-### NASDAQ
-AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA
-
-### NYSE
-JPM, JNJ, V, KO
-
-### FTSE (London)
-ULVR.L, HSBA.L, BP.L, GSK.L, RIO.L
-
-### Borsa Italiana (BIT)
-ENI.MI, ISP.MI, ENEL.MI, LDO.MI, MONC.MI
-
----
+Si modifica in `scripts/config.py` (`UNIVERSE`).
 
 ## Manutenzione
 
-- **Reset del portafoglio**: sostituisci `data/portfolio_history.json` con il contenuto iniziale
-- **Modifica ticker**: aggiorna `UNIVERSE` in `scripts/main_pipeline.py`
-- **Cambio orari**: modifica i cron expressions in `.github/workflows/paper_trading.yml`
+- **Reset di una strategia**: elimina `data/portfolios/<strategia>.json` (riparte da 3.000 €).
+- **Orari**: cron in `.github/workflows/paper_trading.yml` (UTC, non seguono l'ora legale).

@@ -19,6 +19,7 @@ from portfolio_io import (
     log_iteration_for_strategy,
 )
 from telegram_utils import send_telegram_message, send_telegram_photo
+from market_note import generate_market_note
 from chart_utils import generate_dashboard
 from dashboard_generator import build_html
 
@@ -433,6 +434,7 @@ def run_pipeline(session_label: str) -> float:
         primary["portfolio"],
         prices,
         failed_tickers=failed_tickers,
+        signals=signals,
     )
     send_telegram_message(report, session=session_label, has_trades=has_any_trades)
 
@@ -534,6 +536,7 @@ def build_telegram_report(
     primary_portfolio: dict,
     prices: dict,
     failed_tickers: set = None,
+    signals: dict = None,
 ) -> str:
     TELEGRAM_LIMIT = 4000
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -627,6 +630,15 @@ def build_telegram_report(
         "fundamental":  "Fundamental",
         "sentiment":    "Sentiment",
     }
+
+    try:
+        note = generate_market_note(strategy_results, signals or {}, INITIAL_CAPITAL)
+        lines.append(sep)
+        lines.append("📝 NOTA DI MERCATO")
+        lines.append(note)
+        lines.append("")
+    except Exception as e:
+        print(f"[WARN] Market note failed: {e}")
 
     lines.append(sep)
     lines.append("📊 PORTAFOGLI (buy€ → cur€ | P&L)")
