@@ -166,3 +166,45 @@ def test_history_metrics_not_inflated_by_intraday_entries():
 
 def test_history_metrics_empty():
     assert history_metrics([]) == {}
+
+
+# ── sentiment: risparmio quota Alpha Vantage ─────────────────────────────────
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+
+def _fake_av(calls):
+    def fetch(ticker):
+        calls.append(ticker)
+        return {"score": 0.0, "label": "neutral", "num_articles": 0, "headlines": []}
+
+    return fetch
+
+
+def test_sentiment_skips_recently_empty_tickers(monkeypatch):
+    now = datetime(2026, 10, 2, tzinfo=timezone.utc)
+    prev = {
+        "EU": {"score": 0.0, "num_articles": 0, "checked_at": (now - timedelta(days=2)).isoformat()},
+        "OLD": {"score": 0.0, "num_articles": 0, "checked_at": (now - timedelta(days=9)).isoformat()},
+        "LEGACY": {"score": 0.0, "num_articles": 0},  # senza data: ricontrollare
+        "US": {"score": 0.2, "num_articles": 7, "checked_at": now.isoformat()},
+    }
+    calls = []
+    monkeypatch.setattr(fs, "fetch_av_news_sentiment", _fake_av(calls))
+    monkeypatch.setattr(fs.time, "sleep", lambda s: None)
+    out = fs.fetch_all_sentiment(
+        {t: {} for t in prev}, previous=prev, now=now
+    )
+    assert sorted(calls) == ["LEGACY", "OLD", "US"]  # solo EU saltato
+    assert out["EU"] == prev["EU"]
+    assert out["OLD"]["checked_at"] == now.isoformat()  # timbrato di nuovo
+
+
+def test_sentiment_without_previous_fetches_everything(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fs, "fetch_av_news_sentiment", _fake_av(calls))
+    sleeps = []
+    monkeypatch.setattr(fs.time, "sleep", lambda s: sleeps.append(s))
+    fs.fetch_all_sentiment({"A": {}, "B": {}, "C": {}})
+    assert calls == ["A", "B", "C"]
+    assert sleeps == [13, 13]  # nessuna attesa dopo l'ultima ne' prima della prima

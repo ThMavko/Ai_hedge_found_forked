@@ -5,6 +5,7 @@ from .fundamental import FundamentalStrategy
 from .sentiment_strategy import SentimentStrategy
 from .inverse_volatility import InverseVolatilityStrategy
 from .trend_momentum import TrendMomentumStrategy
+from .risk import RiskManagedStrategy, cap_weights
 
 __all__ = [
     "BaseStrategy",
@@ -14,4 +15,6 @@ __all__ = [
     "SentimentStrategy",
     "InverseVolatilityStrategy",
     "TrendMomentumStrategy",
+    "RiskManagedStrategy",
+    "cap_weights",
 ]

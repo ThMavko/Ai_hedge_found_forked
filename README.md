@@ -17,6 +17,10 @@ Tutte implementano `BaseStrategy.compute_weights(universe, prices, signals) -> {
 | `trend_momentum` | momentum, ma solo sopra la media mobile a 200gg; altrimenti cassa | `momentum`, `trend` | solo backtest |
 | `inverse_volatility` | peso ∝ 1/volatilità (risk-parity semplificato) | `volatility.vol_60d` | solo backtest |
 
+`RiskManagedStrategy(strategia)` (in `strategies/risk.py`) è un livello che avvolge qualunque
+strategia con un tetto per titolo (15%) e per settore (35%); l'eccesso va sui titoli con spazio e,
+se non ce n'è, resta in cassa. Il backtest include `momentum_risk` per misurare se aiuta.
+
 Le ultime due sono disponibili nel codice e nel backtest, ma non sono ancora registrate in
 `STRATEGIES` (`scripts/config.py`): farlo crea un nuovo portafoglio live e va deciso consapevolmente.
 Aggiungere una strategia = una classe in `scripts/strategies/` + export in `__init__.py`.
@@ -69,6 +73,10 @@ pipeline è costruita perché questo non produca dati finti:
   noto, poi al costo medio. Mai a zero.
 - **Cambi con cache.** Un solo fetch per valuta al giorno; se fallisce si usa l'ultimo tasso reale,
   non un valore fisso. I tassi usati sono registrati in ogni iterazione (`fx_rates`).
+- **Quota Alpha Vantage.** I ticker senza articoli nell'ultimo controllo non vengono richiesti
+  di nuovo per 7 giorni (se i titoli europei non sono coperti, si risparmiano ~10 richieste/giorno).
+- **Pipeline leggera.** `paper_trading.yml` installa `requirements-pipeline.txt` (niente torch):
+  FinBERT serve solo a `market_analysis.yml`.
 - **Copertura segnali nel report.** Se un segnale copre meno del 50% dei ticker, il report
   Telegram lo dice.
 
@@ -91,6 +99,10 @@ python scripts/backtest.py --years 5          # scrive docs/backtest.{md,json,pn
 
 Confronta le strategie con **SPY** e **FTSE MIB** (buy & hold), in EUR, con ribilanciamento
 mensile e costi di transazione (default 10 bps sul turnover).
+
+Il report include anche la **stabilità per sottoperiodo** (metà iniziale vs metà finale del
+periodo): non è un walk-forward, perché le strategie hanno parametri fissi, ma mostra se un
+risultato regge in entrambi i periodi o dipende da uno solo.
 
 Limiti dichiarati:
 

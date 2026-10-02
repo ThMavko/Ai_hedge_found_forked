@@ -32,6 +32,7 @@ from strategies import (  # noqa: E402
     EqualWeightStrategy,
     InverseVolatilityStrategy,
     MomentumStrategy,
+    RiskManagedStrategy,
     TrendMomentumStrategy,
 )
 
@@ -49,6 +50,8 @@ def default_strategies() -> dict:
         "momentum": MomentumStrategy(),
         "trend_momentum": TrendMomentumStrategy(),
         "inverse_volatility": InverseVolatilityStrategy(),
+        # stessa strategia + tetti 15% per titolo e 35% per settore: misura se aiutano
+        "momentum_risk": RiskManagedStrategy(MomentumStrategy()),
     }
 
 
@@ -159,7 +162,39 @@ def download_prices_eur(
     return frame, missing
 
 
-def format_markdown(results: dict[str, dict], meta: dict) -> str:
+def subperiod_metrics(
+    curves: dict[str, pd.Series], splits: int = 2
+) -> list[dict]:
+    """Metriche su `splits` sottoperiodi consecutivi di uguale lunghezza.
+
+    Non e' un walk-forward (le strategie hanno parametri fissi, niente da
+    ri-ottimizzare): misura la *stabilita'*. Una strategia brillante in un solo
+    sottoperiodo e' probabilmente fortuna, non un vantaggio.
+    """
+    first = next(iter(curves.values()))
+    n = len(first)
+    bounds = [round(i * n / splits) for i in range(splits + 1)]
+    out = []
+    for k in range(splits):
+        lo, hi = bounds[k], min(bounds[k + 1] + 1, n)  # +1: parte dall'ultimo punto
+        start, end = first.index[lo], first.index[hi - 1]
+        # slicing per DATA: i benchmark hanno calendari di borsa diversi
+        out.append(
+            {
+                "start": str(start.date()),
+                "end": str(end.date()),
+                "metrics": {
+                    name: summarize(s.loc[start:end].tolist())
+                    for name, s in curves.items()
+                },
+            }
+        )
+    return out
+
+
+def format_markdown(
+    results: dict[str, dict], meta: dict, subperiods: list[dict] | None = None
+) -> str:
     lines = [
         "# Backtest",
         "",
@@ -176,6 +211,19 @@ def format_markdown(results: dict[str, dict], meta: dict) -> str:
             f"{m['volatility']:.1%} | {m['sharpe']:.2f} | {m['sortino']:.2f} | "
             f"-{m['max_drawdown']:.1%} | {m['calmar']:.2f} |"
         )
+    if subperiods:
+        lines += ["", "## Stabilità per sottoperiodo", ""]
+        header = "| Strategia | " + " | ".join(
+            f"{p['start']} → {p['end']}" for p in subperiods
+        ) + " |"
+        lines += [header, "|---|" + "---:|" * len(subperiods)]
+        for name in results:
+            cells = []
+            for p in subperiods:
+                m = p["metrics"][name]
+                cells.append(f"{m['total_return']:+.1%} · Sharpe {m['sharpe']:.2f}")
+            lines.append(f"| {name} | " + " | ".join(cells) + " |")
+        lines.append("")
     lines += [
         "",
         "Le strategie `fundamental` e `sentiment` non sono incluse: non esiste uno "
@@ -208,6 +256,7 @@ def main() -> None:
     parser.add_argument("--years", type=int, default=5)
     parser.add_argument("--rebalance-every", type=int, default=21)
     parser.add_argument("--cost-bps", type=float, default=10.0)
+    parser.add_argument("--splits", type=int, default=2, help="sottoperiodi di stabilita'")
     parser.add_argument("--out-dir", default=os.path.join(
         os.path.dirname(__file__), "..", "docs"))
     args = parser.parse_args()
@@ -236,6 +285,7 @@ def main() -> None:
         curves[f"benchmark:{b}"] = buy_and_hold(bench_prices[b], start)
 
     results = {n: summarize(s.tolist()) for n, s in curves.items()}
+    subperiods = subperiod_metrics(curves, args.splits)
     meta = {
         "start": str(start.date()),
         "end": str(next(iter(curves.values())).index[-1].date()),
@@ -245,12 +295,14 @@ def main() -> None:
     }
     os.makedirs(args.out_dir, exist_ok=True)
     with open(os.path.join(args.out_dir, "backtest.json"), "w") as f:
-        json.dump({"meta": meta, "metrics": results}, f, indent=2)
+        json.dump(
+            {"meta": meta, "metrics": results, "subperiods": subperiods}, f, indent=2
+        )
         f.write("\n")
     with open(os.path.join(args.out_dir, "backtest.md"), "w", encoding="utf-8") as f:
-        f.write(format_markdown(results, meta))
+        f.write(format_markdown(results, meta, subperiods))
     save_chart(curves, os.path.join(args.out_dir, "backtest.png"))
-    print(format_markdown(results, meta))
+    print(format_markdown(results, meta, subperiods))
 
 
 if __name__ == "__main__":
