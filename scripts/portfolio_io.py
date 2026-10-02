@@ -96,11 +96,13 @@ def log_iteration_for_strategy(
     transactions: list[dict[str, Any]],
     prices: dict[str, float],
     reasoning: str,
+    fx_rates: dict[str, float] | None = None,
     extra: dict[str, Any] | None = None,
 ) -> None:
     """Log iteration for a specific strategy portfolio.
 
-    `extra` aggiunge campi opzionali alla voce (fx_rates, stale_tickers, fees_eur...).
+    `fx_rates` registra i tassi usati (valutazione riproducibile e riparabile a posteriori);
+    `extra` aggiunge altri campi opzionali alla voce (stale_tickers, fees_eur...).
     """
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -118,6 +120,8 @@ def log_iteration_for_strategy(
         "transactions": transactions,
         "reasoning": reasoning,
     }
+    if fx_rates:
+        entry["fx_rates"] = {k: round(v, 6) for k, v in fx_rates.items()}
     if extra:
         entry.update(extra)
     portfolio["iterations_log"].append(entry)

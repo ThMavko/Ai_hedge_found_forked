@@ -26,7 +26,7 @@ def _load_signals() -> dict:
             signals = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         signals = {}
-    return enrich_signals(signals, load_price_history(), UNIVERSE)
+    return enrich_signals(signals, UNIVERSE)
 
 
 def _live_prices() -> dict:

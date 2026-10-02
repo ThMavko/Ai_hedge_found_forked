@@ -1,18 +1,110 @@
+"""Storico prezzi: (1) ricostruito dai log delle iterazioni + segnali derivati,
+(2) serie giornaliera persistita in data/price_history.json (prezzi, FX, benchmark).
+
+Parte 1 - ricostruzione dai log + segnali derivati.
+
+Perche' esiste: su GitHub Actions Yahoo Finance blocca le richieste, quindi i
+segnali calcolati con yfinance (momentum, fondamentali) restano vuoti. I prezzi
+reali pero' ci sono: ogni sessione li scrive in `iterations_log[*].prices_used`.
+Da li' si ricostruisce una serie giornaliera, senza chiamate di rete, senza
+nuove chiavi API e senza nuovi file da versionare.
+
+I prezzi sono in valuta locale: i rendimenti ignorano quindi la componente FX.
 """
-Storico dei prezzi di chiusura giornalieri (prezzo locale, nella valuta del titolo).
-
-Salvato in data/price_history.json come {ticker: {"YYYY-MM-DD": close}}.
-Serve a due cose:
-  1. ricostruire in modo non distruttivo i valori di portafoglio storici quando
-     alcuni prezzi mancavano (vedi metrics.build_equity_series);
-  2. confrontare le strategie con i benchmark.
-
-Il file e' additivo: i valori gia' presenti non vengono mai cancellati.
-"""
-
+import glob
 import json
+import math
 import os
 from datetime import date
+
+PORTFOLIOS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "portfolios")
+
+TRADING_DAYS = 252
+MOMENTUM_3M = 63
+MOMENTUM_1M = 21
+VOL_WINDOW = 60
+TREND_WINDOW = 200
+MIN_OBS = 10  # sotto questa soglia nessun segnale: meglio nessun dato che dati finti
+
+# Valori usati dalla pipeline come prezzo "nominale" quando il fetch fallisce
+_PLACEHOLDERS = {100.0, 150.0}
+
+
+def _is_placeholder_day(prices: dict) -> bool:
+    vals = [v for v in prices.values() if v and v > 0]
+    if not vals:
+        return True
+    return sum(1 for v in vals if v in _PLACEHOLDERS) / len(vals) >= 0.5
+
+
+def load_history(portfolios_dir: str = PORTFOLIOS_DIR) -> dict[str, list[tuple[str, float]]]:
+    """{ticker: [(YYYY-MM-DD, prezzo), ...]} ordinato, un valore per giorno
+    (l'ultimo registrato). Scarta i giorni con prezzi nominali di fallback."""
+    per_day: dict[str, dict[str, tuple[str, float]]] = {}
+    for path in sorted(glob.glob(os.path.join(portfolios_dir, "*.json"))):
+        try:
+            with open(path) as f:
+                log = json.load(f).get("iterations_log", [])
+        except (OSError, json.JSONDecodeError):
+            continue
+        for entry in log:
+            prices = entry.get("prices_used") or {}
+            ts = entry.get("timestamp", "")
+            if not ts or _is_placeholder_day(prices):
+                continue
+            day = ts[:10]
+            for ticker, price in prices.items():
+                if not price or price <= 0:
+                    continue
+                cur = per_day.setdefault(ticker, {}).get(day)
+                if cur is None or ts >= cur[0]:
+                    per_day[ticker][day] = (ts, float(price))
+    return {
+        t: sorted((d, v[1]) for d, v in days.items()) for t, days in per_day.items()
+    }
+
+
+def latest_prices(history: dict[str, list[tuple[str, float]]]) -> dict[str, float]:
+    """Ultimo prezzo reale noto (valuta locale) per ticker."""
+    return {t: series[-1][1] for t, series in history.items() if series}
+
+
+def compute_price_signals(history: dict[str, list[tuple[str, float]]]) -> dict:
+    """Segnali dai soli prezzi. Un ticker senza abbastanza storico viene OMESSO
+    dal segnale (mai riempito con 0.0), cosi' le strategie sanno che manca."""
+    momentum: dict = {}
+    volatility: dict = {}
+    trend: dict = {}
+    for ticker, series in history.items():
+        px = [p for _, p in series]
+        n = len(px)
+        if n < MIN_OBS:
+            continue
+        entry = {"n_obs": n, "source": "price_history"}
+        if n > MOMENTUM_1M:
+            entry["return_1m"] = round(px[-1] / px[-1 - MOMENTUM_1M] - 1.0, 4)
+        if n > MOMENTUM_3M:
+            entry["return_3m"] = round(px[-1] / px[-1 - MOMENTUM_3M] - 1.0, 4)
+        if "return_3m" in entry:
+            momentum[ticker] = entry
+
+        rets = [px[i] / px[i - 1] - 1.0 for i in range(1, n)]
+        window = rets[-VOL_WINDOW:]
+        if len(window) >= 20:
+            mean = sum(window) / len(window)
+            var = sum((r - mean) ** 2 for r in window) / (len(window) - 1)
+            volatility[ticker] = {"vol_60d": round(math.sqrt(var * TRADING_DAYS), 4)}
+
+        if n >= TREND_WINDOW:
+            ma = sum(px[-TREND_WINDOW:]) / TREND_WINDOW
+            trend[ticker] = {"above_ma200": px[-1] > ma}
+    return {"momentum": momentum, "volatility": volatility, "trend": trend}
+
+# ---------------------------------------------------------------------------
+# Parte 2 - storico persistito (data/price_history.json): prezzi, FX, benchmark.
+# Serve a ricostruire l'equity con prezzi e cambi reali e a confrontare i benchmark.
+# Additivo: i valori gia' presenti non vengono mai cancellati.
+# ---------------------------------------------------------------------------
 
 PRICE_HISTORY_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "price_history.json"
@@ -192,3 +284,65 @@ def refresh_benchmarks(
     if added:
         save_price_history(history, path)
     return added
+
+
+def combined_history(
+    portfolios_dir: str = PORTFOLIOS_DIR, path: str = PRICE_HISTORY_PATH
+) -> dict[str, list[tuple[str, float]]]:
+    """Storico per ticker [(giorno, prezzo)]: per ognuno la serie piu' lunga tra quella
+    ricostruita dai log e quella persistita in data/price_history.json.
+
+    I titoli con prezzi spesso mancanti nei log (i .MI) hanno storico completo nel file
+    persistito, e quindi segnali (momentum...) calcolabili invece che omessi."""
+    out = dict(load_history(portfolios_dir))
+    for ticker, days in load_price_history(path).items():
+        if ":" in ticker:  # chiavi speciali: FX:<valuta>, DIV:<ticker>
+            continue
+        series = sorted(days.items())
+        if len(series) > len(out.get(ticker, [])):
+            out[ticker] = series
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Dividendi (chiavi "DIV:<ticker>" -> {data ex-dividend: importo per azione in valuta locale}).
+# Servono a stimare quanto le strategie non hanno incassato: la simulazione accredita solo
+# la variazione di prezzo, mentre i benchmark sono "total return".
+# ---------------------------------------------------------------------------
+
+
+def fetch_dividends_history(tickers: list[str], start: str) -> dict:
+    """Dividendi per azione da Yahoo Finance. Best-effort: {} se fallisce.
+
+    Gli importi sono nella stessa unita' dei prezzi (per i titoli .L, pence)."""
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {}
+    out: dict[str, dict[str, float]] = {}
+    for ticker in tickers:
+        try:
+            series = yf.Ticker(ticker).dividends
+        except Exception as e:
+            print(f"[WARN] dividends download failed for {ticker}: {e}")
+            continue
+        if series is None or len(series) == 0:
+            continue
+        days = {
+            d.strftime("%Y-%m-%d"): round(float(v), 6)
+            for d, v in series.items()
+            if d.strftime("%Y-%m-%d") >= start and float(v) > 0
+        }
+        if days:
+            out[f"DIV:{ticker}"] = days
+    return out
+
+
+def update_dividends_history(tickers: list[str], start: str, path: str = PRICE_HISTORY_PATH) -> int:
+    """Aggiunge i dividendi allo storico persistito, senza sovrascrivere. Ritorna i punti nuovi."""
+    return merge_into_history(fetch_dividends_history(tickers, start), path)
+
+
+def dividends_by_ticker(price_history: dict) -> dict[str, dict[str, float]]:
+    """{ticker: {data: importo}} estratto dalle chiavi DIV:<ticker> dello storico persistito."""
+    return {k[4:]: v for k, v in price_history.items() if k.startswith("DIV:")}

@@ -1,5 +1,6 @@
 """
-Backfill una tantum (o periodico) dello storico prezzi/FX/benchmark in data/price_history.json.
+Backfill una tantum (o periodico) dello storico prezzi/FX/benchmark/dividendi in
+data/price_history.json.
 
 Uso:  python scripts/backfill_history.py [--start 2026-06-01]
 
@@ -14,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import BENCHMARKS, FX_HISTORY_TICKERS, UNIVERSE
-from price_history import update_fx_history, update_price_history
+from price_history import update_dividends_history, update_fx_history, update_price_history
 
 
 def main() -> None:
@@ -27,6 +28,8 @@ def main() -> None:
     print(f"[OK] prezzi: +{added} punti")
     added_fx = update_fx_history(FX_HISTORY_TICKERS, args.start)
     print(f"[OK] FX: +{added_fx} punti")
+    added_div = update_dividends_history(list(UNIVERSE), args.start)
+    print(f"[OK] dividendi: +{added_div} punti")
 
 
 if __name__ == "__main__":

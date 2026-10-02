@@ -206,6 +206,8 @@ tr.bench-row td { color: var(--text-muted); font-style: italic; }
 .more:hover { background: var(--hover); }
 
 .cols-2 { grid-template-columns: 1.35fr 1fr; }
+.cols-metrics { grid-template-columns: 1.9fr 1fr; }
+#metricsTable th, #metricsTable td, #relTable th, #relTable td { padding-left: 9px; padding-right: 9px; }
 .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 44px; line-height: 1.7; }
 
@@ -243,8 +245,26 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
 .d3 .c3 { fill: var(--text-muted); font-size: 12px; }
 .d3 .c3.pos { fill: var(--success); } .d3 .c3.neg { fill: var(--error); }
 
+/* ── Nota di mercato, stato dei dati ──────────────────────────────────────────────────────── */
+.mnote { display: grid; gap: 6px; margin-top: 8px; }
+.mnote p { color: var(--text-2); }
+.health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.hrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-subtle); font-size: 13px; }
+.hrow:last-of-type { border-bottom: 0; }
+.hrow .k { color: var(--text-2); display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hrow .v { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 12.5px; }
+.st { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent); }
+.st.warn { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 20%, transparent); }
+.st.bad { background: var(--error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 20%, transparent); }
+.st.na { background: var(--text-muted); box-shadow: none; }
+.meter { display: inline-block; width: 70px; height: 5px; border-radius: 3px; background: var(--well); vertical-align: middle; margin-right: 8px; overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 3px; background: var(--success); }
+.meter.warn i { background: var(--warning); } .meter.bad i { background: var(--error); }
+.chip.mk.on { background: var(--accent-tint); }
+.sub-head { padding: 14px 16px 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+
 @media (max-width: 960px) {
-  .hero, .cols-2, .cols-3 { grid-template-columns: 1fr; }
+  .hero, .cols-2, .cols-3, .cols-metrics, .health-grid { grid-template-columns: 1fr; }
   .tiles { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 640px) {
@@ -272,7 +292,7 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
   </a>
   <nav class="nav" id="nav" aria-label="Sezioni">
     <a href="#overview" class="on">Panoramica</a><a href="#performance">Andamento</a><a href="#metrics">Metriche</a>
-    <a href="#portfolio">Portafoglio</a><a href="#screener">Screener</a><a href="#trades">Trade</a>
+    <a href="#portfolio">Portafoglio</a><a href="#screener">Screener</a><a href="#trades">Trade</a><a href="#health">Dati</a>
   </nav>
   <div class="status" id="status"></div>
   <button id="themeSwitch" class="theme-switch" type="button" role="switch" aria-checked="false" aria-pressed="false" aria-label="Passa al tema scuro" title="Tema scuro"></button>
@@ -286,6 +306,7 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
     <div class="card reveal tilt" data-tilt="3" id="heroRank"></div>
   </section>
   <div class="tiles" id="tiles"></div>
+  <div class="card reveal" id="marketNote" style="margin-top:14px" hidden></div>
 
   <section id="performance" class="reveal">
     <div class="sec-head"><h2>Andamento</h2><p id="perfSub"></p></div>
@@ -295,6 +316,7 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
         <div class="seg" id="rangeSeg"><button data-r="30">1M</button><button data-r="90">3M</button><button data-r="0" class="on">Tutto</button></div>
         <div class="spacer"></div>
         <div class="chips" id="seriesChips"></div>
+        <div class="chips"><button type="button" class="chip mk" id="marksChip" title="Mostra acquisti (▲) e vendite (▼) sulle curve" aria-pressed="false">▲▼ Operazioni</button></div>
       </div>
       <div id="equityChart" class="chart"></div>
       <div class="foot" id="equityNote"></div>
@@ -303,12 +325,17 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
 
   <section id="metrics" class="reveal">
     <div class="sec-head"><h2>Metriche</h2><p>Rendimenti giornalieri · risk-free <span id="rf"></span></p></div>
-    <div class="grid cols-2">
+    <div class="grid cols-metrics">
       <div class="card flush"><div class="scroll"><table id="metricsTable"></table></div></div>
       <div class="card tilt" data-tilt="1.2"><div class="eyebrow">Rischio / rendimento</div><div id="riskChart" class="chart sm" style="height:300px"></div>
         <div class="foot">In alto a sinistra = più rendimento con meno volatilità.</div></div>
     </div>
-    <div class="foot">Rendimento annualizzato e Calmar non sono mostrati: con pochi mesi di storico sarebbero fuorvianti. Sharpe e Sortino sono indicativi. Il benchmark è nella valuta di quotazione.</div>
+    <div class="foot" id="metricsNote"></div>
+    <div class="card flush" style="margin-top:14px">
+      <div class="sub-head"><div class="eyebrow">Rispetto al benchmark</div><div class="seg" id="relSeg"></div></div>
+      <div class="scroll"><table id="relTable"></table></div>
+    </div>
+    <div class="foot" id="relNote"></div>
   </section>
 
   <section id="portfolio" class="reveal">
@@ -335,6 +362,11 @@ footer { color: var(--text-muted); font-size: 12px; text-align: center; margin-t
     <div class="tiles" id="tradeTiles" style="margin-top:0;margin-bottom:12px"></div>
     <div class="toolbar"><div class="chips" id="tradeChips"></div></div>
     <div class="card flush"><div class="scroll"><table id="tradesTable"></table></div><div id="tradesMore"></div></div>
+  </section>
+
+  <section id="health" class="reveal">
+    <div class="sec-head"><h2>Stato dei dati</h2><p id="healthSub"></p></div>
+    <div class="health-grid" id="healthGrid"></div>
   </section>
 
   <footer>Simulazione di paper trading a scopo didattico — non è consulenza finanziaria.<br><span id="foot"></span></footer>
@@ -441,12 +473,15 @@ $('perfSub').textContent = `${fdate(firstDay)} → ${fdate(lastDay)} · ${S[orde
     return (fill ? `<path d="${d}L600 110L0 110Z" fill="${color}" opacity=".13"/>` : '') +
       `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" ${extra}/>`;
   };
+  const lt = S[lead.key];
+  const divNote = lt.dividends_est_eur > 0 && lt.metrics_tr
+    ? `<span class="muted" title="Stima: dividendi dei titoli in portafoglio che la simulazione non accredita in cassa (esclude le tasse)">· con dividendi stimati <b class="${cls(lt.metrics_tr.total_return)}">${pct(lt.metrics_tr.total_return)}</b></span>` : '';
   const cmp = vsB === null ? '' : `<span class="muted">${Math.abs(vsB) < 0.05 ? 'in linea con' : vsB > 0 ? `<b class="pos">${sgn(vsB)}${nf(vsB, 1)} pt</b> sopra` : `<b class="neg">${nf(vsB, 1)} pt</b> sotto`} ${refB.label}</span>`;
   $('heroMain').innerHTML = `
     <div class="eyebrow" style="position:relative">Strategia in testa</div>
     <div class="hero-name">${dot(lead.color)}${lead.label}</div>
     <div class="hero-value mono" id="heroVal">${eur(val)}</div>
-    <div class="hero-delta"><span class="pill ${cls(m.total_return)} mono">${pct(m.total_return)}</span>${cmp}</div>
+    <div class="hero-delta"><span class="pill ${cls(m.total_return)} mono">${pct(m.total_return)}</span>${cmp}${divNote}</div>
     <div class="hero-spark"><svg viewBox="0 0 600 110" preserveAspectRatio="none" role="img" aria-label="Andamento ${lead.label} contro benchmark">
       ${refB ? path(b, 'var(--text-muted)', 'stroke-dasharray="5 5" opacity=".8"', false) : ''}${path(a, lead.color, '', true)}</svg>
       <div class="legend-inline"><span><i style="border-color:${lead.color}"></i>${lead.label}</span>${refB ? `<span><i style="border-top-style:dashed;border-color:var(--text-muted)"></i>${refB.label}</span>` : ''}</div></div>`;
@@ -476,7 +511,7 @@ $('perfSub').textContent = `${fdate(firstDay)} → ${fdate(lastDay)} · ${S[orde
 })();
 
 /* ── grafico andamento ─────────────────────────────────────────────────────────────────────── */
-let view = 'rebased', range = 0;
+let view = 'rebased', range = 0, showMarks = false;
 const off = new Set();
 const chip = (label, color, key, dash) => `<button type="button" class="chip" data-k="${key}">${dot(color, dash)}${label}</button>`;
 $('seriesChips').innerHTML = order.map(k => chip(S[k].label, S[k].color, k)).join('') + bKeys.map(k => chip(B[k].label, benchColor(k), k, true)).join('');
@@ -493,6 +528,11 @@ function seg(id, attr, cb) {
 }
 seg('viewSeg', 'v', v => { view = v; drawEquity(); });
 seg('rangeSeg', 'r', r => { range = +r; drawEquity(); });
+$('marksChip').addEventListener('click', () => {
+  showMarks = !showMarks;
+  $('marksChip').classList.toggle('on', showMarks); $('marksChip').setAttribute('aria-pressed', String(showMarks));
+  drawEquity();
+});
 
 function cut(points) {
   if (!range) return points;
@@ -527,11 +567,26 @@ function drawEquity() {
     traces.push({x: pts.map(p => p[0]), y: view === 'dd' ? ddSeries(pts) : rebased(pts), name: B[k].label, mode: 'lines',
       line: {color: benchColor(k), width: 1.8, dash: 'dot'}, hovertemplate: view === 'dd' ? '%{y:.2f}%' : '%{y:.1f}'});
   }
+  if (showMarks) for (const k of order) {
+    if (off.has(k)) continue;
+    const pts = cut(S[k].equity), ys = view === 'dd' ? ddSeries(pts) : view === 'value' ? vals(pts) : rebased(pts);
+    const yAt = {}; pts.forEach((p, i) => { yAt[p[0]] = ys[i]; });
+    const buys = {x: [], y: [], text: []}, sells = {x: [], y: [], text: []};
+    for (const m of S[k].marks) {
+      if (!(m.d in yAt)) continue;
+      if (m.b.length) { buys.x.push(m.d); buys.y.push(yAt[m.d]); buys.text.push(`${S[k].label} · acquisti: ${m.b.join(', ')}`); }
+      if (m.s.length) { sells.x.push(m.d); sells.y.push(yAt[m.d]); sells.text.push(`${S[k].label} · vendite: ${m.s.join(', ')}`); }
+    }
+    const mk = (d, sym) => ({x: d.x, y: d.y, text: d.text, mode: 'markers', showlegend: false, hovertemplate: '%{text}<extra></extra>',
+      marker: {symbol: sym, size: 9, color: S[k].color, line: {color: tok('--surface'), width: 1.5}}});
+    if (buys.x.length) traces.push(mk(buys, 'triangle-up'));
+    if (sells.x.length) traces.push(mk(sells, 'triangle-down'));
+  }
   const title = view === 'dd' ? 'Drawdown %' : view === 'value' ? 'Valore €' : 'Base 100';
   Plotly.react('equityChart', traces, baseLayout({yaxis: {gridcolor: tok('--line-subtle'), zeroline: false, title: {text: title, standoff: 8}}}), CFG);
-  decorate('equityChart', traces.filter(t => t.line.dash !== 'dot').map((t, i) => ({x: t.x[t.x.length - 1], y: t.y[t.y.length - 1], c: t.line.color, d: i * .35})));
+  decorate('equityChart', traces.filter(t => t.mode === 'lines' && t.line.dash !== 'dot').map((t, i) => ({x: t.x[t.x.length - 1], y: t.y[t.y.length - 1], c: t.line.color, d: i * .35})));
   $('equityNote').textContent = view === 'rebased'
-    ? 'Ogni serie parte da 100 all\'inizio dell\'intervallo. I benchmark sono nella valuta di quotazione (SPY in USD: non include l\'effetto cambio).'
+    ? 'Ogni serie parte da 100 all\'inizio dell\'intervallo. I benchmark sono in EUR (S&P 500 convertito con i cambi storici) e total return: i dividendi sono reinvestiti.'
     : view === 'value' ? 'Valore del portafoglio in euro, ultimo valore di ogni giorno.' : 'Distanza dal massimo precedente.';
 }
 
@@ -562,27 +617,56 @@ function table(el, cols, rows, opt) {
 /* ── metriche + rischio/rendimento ─────────────────────────────────────────────────────────── */
 let metricRows = [];
 (function metrics() {
+  // [etichetta, accessor(riga), formato, +1 = piu' alto e' meglio, suggerimento]
   const COLS = [
-    ['Rend. tot.', m => m.total_return, v => pct(v), 1, 'Rendimento dall\'inizio'],
-    ['Volatilità', m => m.ann_vol, v => pct(v, 1, false), -1, 'Deviazione standard annualizzata dei rendimenti giornalieri'],
-    ['Sharpe', m => m.sharpe, v => nf(v), 1, 'Rendimento in eccesso rispetto al risk-free per unità di volatilità'],
-    ['Sortino', m => m.sortino, v => nf(v), 1, 'Come Sharpe, ma penalizza solo la volatilità al ribasso'],
-    ['Max DD', m => -m.max_drawdown, v => pct(v, 1), 1, 'Peggior calo dal massimo precedente'],
-    ['Giorni +', m => m.win_rate, v => pct(v, 0, false), 1, 'Quota di giorni con rendimento positivo'],
+    ['Rend. tot.', r => r.m.total_return, v => pct(v), 1, 'Rendimento dall\'inizio, solo variazione di prezzo (come simulato)'],
+    ['Con div.*', r => r.mtr.total_return, v => pct(v), 1, 'Stima: aggiunge i dividendi che la simulazione non accredita in cassa. Per i benchmark e\' lo stesso valore (total return)'],
+    ['Volatilità', r => r.m.ann_vol, v => pct(v, 1, false), -1, 'Deviazione standard annualizzata dei rendimenti giornalieri'],
+    ['Sharpe', r => r.m.sharpe, v => nf(v), 1, 'Rendimento in eccesso rispetto al risk-free per unità di volatilità'],
+    ['Sortino', r => r.m.sortino, v => nf(v), 1, 'Come Sharpe, ma penalizza solo la volatilità al ribasso'],
+    ['Max DD', r => -r.m.max_drawdown, v => pct(v, 1), 1, 'Peggior calo dal massimo precedente'],
+    ['Giorni +', r => r.m.win_rate, v => pct(v, 0, false), 1, 'Quota di giorni con rendimento positivo'],
   ];
   metricRows = [
-    ...order.map(k => ({name: S[k].label, color: S[k].color, m: S[k].metrics, bench: false})),
-    ...bKeys.map(k => ({name: B[k].label, color: benchColor(k), m: B[k].metrics, bench: true})),
+    ...order.map(k => ({name: S[k].label, color: S[k].color, m: S[k].metrics, mtr: S[k].metrics_tr || S[k].metrics, bench: false})),
+    ...bKeys.map(k => ({name: B[k].label, color: benchColor(k), m: B[k].metrics, mtr: B[k].metrics, bench: true})),
   ];
   const strat = metricRows.filter(r => !r.bench);
-  const bounds = COLS.map(c => { const v = strat.map(r => c[1](r.m)); return [Math.min(...v), Math.max(...v)]; });
-  const score = (r, i) => { const v = COLS[i][1](r.m), [lo, hi] = bounds[i], t = hi > lo ? (v - lo) / (hi - lo) : 0; return COLS[i][3] > 0 ? t : 1 - t; };
+  const bounds = COLS.map(c => { const v = strat.map(c[1]); return [Math.min(...v), Math.max(...v)]; });
+  const score = (r, i) => { const v = COLS[i][1](r), [lo, hi] = bounds[i], t = hi > lo ? (v - lo) / (hi - lo) : 0; return COLS[i][3] > 0 ? t : 1 - t; };
   const cols = [{key: 'name', label: 'Strategia', val: r => r.name, fmt: r => `<span style="display:inline-flex;align-items:center;gap:8px">${dot(r.color, r.bench)}${r.name}</span>`}]
-    .concat(COLS.map((c, i) => ({key: 'c' + i, label: c[0], tip: c[4], val: r => c[1](r.m), fmt: r => c[2](c[1](r.m)),
+    .concat(COLS.map((c, i) => ({key: 'c' + i, label: c[0], tip: c[4], val: c[1], fmt: r => c[2](c[1](r)),
       cls: r => !r.bench && score(r, i) === 1 ? 'best' : '',
       style: r => r.bench ? '' : `background:color-mix(in srgb, var(--brand) ${Math.round(score(r, i) * 16)}%, transparent)`})));
   table($('metricsTable'), cols, metricRows, {sort: 'c0', dir: -1, rowClass: r => r.bench ? 'bench-row' : ''});
+  const hd = D.health.dividends;
+  $('metricsNote').textContent = 'Rendimento annualizzato e Calmar non sono mostrati: con pochi mesi di storico sarebbero fuorvianti; Sharpe e Sortino sono indicativi. '
+    + '*Stima dei dividendi non accreditati nella simulazione' + (hd.last_ex_date ? ` (stacchi fino al ${fdate(hd.last_ex_date)})` : '') + ', al lordo delle tasse. I benchmark sono in EUR e total return.';
 })();
+
+let relB = bKeys[0];
+function drawRel() {
+  if (!bKeys.length) { $('relTable').innerHTML = ''; return; }
+  const na = '<span class="muted">n/d</span>';
+  const f = (v, fn) => v === null || v === undefined ? na : fn(v);
+  const rows = order.map(k => ({name: S[k].label, color: S[k].color, r: S[k].vs[relB]}));
+  const num_ = key => r => r.r && r.r[key] !== null && r.r[key] !== undefined ? r.r[key] : -Infinity;
+  const cols = [
+    {key: 'name', label: 'Strategia', val: r => r.name, fmt: r => `<span style="display:inline-flex;align-items:center;gap:8px">${dot(r.color)}${r.name}</span>`},
+    {key: 'beta', label: 'Beta', tip: 'Sensibilita\' ai movimenti del benchmark (1 = si muove come lui)', val: num_('beta'), fmt: r => r.r ? f(r.r.beta, v => nf(v)) : na},
+    {key: 'corr', label: 'Correlaz.', tip: 'Correlazione dei rendimenti giornalieri col benchmark', val: num_('correlation'), fmt: r => r.r ? f(r.r.correlation, v => nf(v)) : na},
+    {key: 'te', label: 'Tracking err.', tip: 'Volatilita\' annualizzata della differenza di rendimento col benchmark', val: num_('tracking_error'), fmt: r => r.r ? f(r.r.tracking_error, v => pct(v, 1, false)) : na},
+    {key: 'ir', label: 'Info ratio', tip: 'Extra-rendimento annualizzato per unita\' di tracking error', val: num_('information_ratio'), fmt: r => r.r ? f(r.r.information_ratio, v => nf(v)) : na, cls: r => r.r && r.r.information_ratio > 0 ? 'pos' : r.r && r.r.information_ratio < 0 ? 'neg' : ''},
+    {key: 'up', label: 'Cattura rialzi', tip: 'Quanto del rialzo del benchmark cattura la strategia nei giorni positivi', val: num_('up_capture'), fmt: r => r.r ? f(r.r.up_capture, v => pct(v, 0, false)) : na},
+    {key: 'down', label: 'Cattura ribassi', tip: 'Quanto del calo del benchmark subisce la strategia nei giorni negativi (meno e\' meglio)', val: num_('down_capture'), fmt: r => r.r ? f(r.r.down_capture, v => pct(v, 0, false)) : na},
+    {key: 'alpha', label: 'Alpha ann.', tip: 'Extra-rendimento annualizzato rispetto al CAPM. Su pochi mesi e\' molto instabile: indicativo', val: num_('alpha'), fmt: r => r.r ? f(r.r.alpha, v => `<span class="muted">${pct(v, 1)}</span>`) : na},
+  ];
+  table($('relTable'), cols, rows, {sort: 'beta', dir: -1});
+  const n = (rows.find(r => r.r) || {}).r;
+  $('relNote').textContent = 'Calcolate sul periodo comune' + (n ? ` (${n.n_obs} giorni)` : '') + ', con la serie dei portafogli comprensiva dei dividendi stimati e allineata alle chiusure del giorno di borsa precedente (i prezzi di una sessione sono l\'ultima chiusura disponibile). Con pochi mesi di storico sono indicative; l\'alpha annualizzato lo e\' ancora di piu\'.';
+}
+$('relSeg').innerHTML = bKeys.map(k => `<button type="button" data-b="${k}" class="${k === relB ? 'on' : ''}">vs ${B[k].label}</button>`).join('');
+seg('relSeg', 'b', b => { relB = b; drawRel(); });
 function drawRisk() {
   const pts = metricRows.map(r => ({x: r.m.ann_vol * 100, y: r.m.total_return * 100, name: r.name, color: r.color, bench: r.bench}));
   Plotly.react('riskChart', [{x: pts.map(p => p.x), y: pts.map(p => p.y), text: pts.map(p => p.name), mode: 'markers+text', textposition: 'top center',
@@ -789,9 +873,64 @@ function applyDecor(gd) {
   });
 })();
 
+/* ── nota di mercato ───────────────────────────────────────────────────────────────────────── */
+(function marketNote() {
+  const n = D.market_note;
+  if (!n || !n.text) return;
+  const el = $('marketNote');
+  el.hidden = false;
+  el.innerHTML = `<div class="eyebrow">Nota di mercato \u00b7 ${fdate(n.date)}</div><div class="mnote">${n.text.split('\n').map(l => `<p>${l.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`).join('')}</div>`;
+})();
+
+/* ── stato dei dati ────────────────────────────────────────────────────────────────────────── */
+function drawHealth() {
+  const H = D.health;
+  const row = (k, v, status) => `<div class="hrow"><span class="k"><span class="st ${status || ''}"></span>${k}</span><span class="v">${v}</span></div>`;
+  const level = r => r >= .8 ? '' : r >= .5 ? 'warn' : 'bad';
+  const label = {momentum: 'Momentum', fundamentals: 'Fondamentali', sentiment: 'Sentiment'};
+  const dt = iso => iso ? new Date(iso).toLocaleString('it-IT', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'}) : 'n/d';
+
+  const sig = Object.keys(H.signals).map(k => {
+    const c = H.signals[k];
+    return `<div class="hrow"><span class="k">${label[k] || k}</span><span class="v"><span class="meter ${level(c.ratio)}"><i style="width:${c.ratio * 100}%"></i></span>${c.covered}/${c.total}</span></div>`;
+  }).join('');
+  const F = H.fundamentals;
+  const fSrc = Object.entries(F.sources).map(([k, v]) => `${k} \u00d7${v}`).join(', ') || 'nessuna';
+  const fAge = F.oldest_days === null ? 'n/d' : `${F.newest_days}\u2013${F.oldest_days} giorni`;
+  const card1 = `<div class="card tilt" data-tilt="2"><div class="eyebrow">Segnali</div>${sig}
+    ${row('Fondamentali reali', `${F.real}/${F.total}`, F.real === 0 ? 'bad' : level(F.real / F.total))}
+    ${row('Fonte', fSrc, F.real ? '' : 'na')}
+    ${row('Età dei dati', fAge, F.oldest_days === null ? 'na' : F.oldest_days > 30 ? 'warn' : '')}
+    <div class="foot">Copertura = titoli con un dato reale. Sotto il 50% la strategia collegata usa una lista di ripiego.</div></div>`;
+
+  const P = H.prices;
+  const fx = Object.entries(H.fx).map(([c, v]) => row(`${c}/EUR`, `${v.rate !== null && v.rate !== undefined ? nf(v.rate, 4) : 'n/d'} \u00b7 ${v.date ? fdate(v.date) : 'n/d'}`, v.age_days === null || v.age_days === undefined ? 'na' : v.age_days > 3 ? 'warn' : '')).join('')
+    || row('Cambi', 'cache non disponibile', 'na');
+  const card2 = `<div class="card tilt" data-tilt="2"><div class="eyebrow">Prezzi e cambi</div>
+    ${row('Fonte prezzi', P.source || 'n/d', P.source ? '' : 'na')}
+    ${row('Ultima sessione', dt(P.last_run), P.last_run ? '' : 'na')}
+    ${row('Prezzi mancanti', P.missing_tickers.length ? P.missing_tickers.join(', ') : 'nessuno', P.missing_tickers.length ? 'warn' : '')}
+    ${row('Prezzi non aggiornati', P.stale_tickers.length ? P.stale_tickers.join(', ') : 'nessuno', P.stale_tickers.length ? 'warn' : '')}
+    ${fx}</div>`;
+
+  const bn = Object.entries(H.benchmarks).map(([k, d]) => row(B[k] ? B[k].label : k, d ? fdate(d) : 'n/d', d ? '' : 'na')).join('');
+  const dv = H.dividends, ss = H.sessions;
+  const card3 = `<div class="card tilt" data-tilt="2"><div class="eyebrow">Storico e benchmark</div>
+    ${row('Sessioni registrate', `${ss.total}`, '')}
+    ${row('Periodo', ss.first ? `${fdate(ss.first)} \u2192 ${fdate(ss.last)}` : 'n/d', ss.first ? '' : 'na')}
+    ${row('Rilevazioni ricostruite', `${D.data_quality.repaired_points}`, D.data_quality.repaired_points ? 'warn' : '')}
+    ${bn}
+    ${row('Dividendi noti', dv.tickers ? `${dv.tickers} titoli \u00b7 fino al ${fdate(dv.last_ex_date)}` : 'nessuno', dv.tickers ? '' : 'warn')}
+    <div class="foot">Ricostruite = valore registrato errato (prezzi mancanti o cambio di ripiego), corretto in dashboard senza toccare i file.</div></div>`;
+
+  $('healthGrid').innerHTML = card1 + card2 + card3;
+  const issues = (F.real === 0) + (P.missing_tickers.length > 0) + (Object.values(H.signals).some(c => c.ratio < .5) ? 1 : 0);
+  $('healthSub').innerHTML = issues ? `<span class="neg">${issues} ${issues === 1 ? 'segnalazione' : 'segnalazioni'}</span>` : '<span class="pos">tutto regolare</span>';
+}
+
 /* ── redraw / scrollspy / reveal ───────────────────────────────────────────────────────────── */
 function redrawCharts() { drawEquity(); drawRisk(); drawPortfolio(); }
-drawEquity(); drawRisk(); drawPortfolio(); drawScreener(); drawTrades();
+drawEquity(); drawRisk(); drawRel(); drawPortfolio(); drawScreener(); drawTrades(); drawHealth();
 
 const links = [...document.querySelectorAll('#nav a')];
 const spy = new IntersectionObserver(es => es.forEach(e => {

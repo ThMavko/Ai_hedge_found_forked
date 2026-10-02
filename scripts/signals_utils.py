@@ -1,89 +1,56 @@
 """
-Utilita' sui segnali (data/signals.json).
+Utilita' sui segnali (data/signals.json) per pipeline e dashboard.
 
-Problema storico: fetch_fundamentals.py scriveva valori neutri (f_score 0.5, momentum 0.0)
-ogni volta che Yahoo Finance falliva, quindi le strategie Momentum e Fundamental giravano
-su dati finti senza che nessuno se ne accorgesse. Qui:
-  * il momentum viene calcolato dallo storico prezzi locale (nessuna dipendenza da Yahoo);
-  * si espone lo stato dei segnali (reale vs placeholder) per mostrarlo in dashboard.
+Cosa conta come dato REALE e' definito in `strategies/signal_utils.py` (has_momentum,
+has_fundamental, has_sentiment); qui ci sono solo:
+  * `enrich_signals`: sostituisce i momentum finti (0.0/0.0) con quelli calcolati dallo
+    storico prezzi locale e aggiunge `status` (segnali reali o no) per la dashboard;
+  * `merge_fundamentals`: un fetch fallito non cancella dati fondamentali reali precedenti.
 """
 
-from datetime import datetime, timedelta
-
-_NEUTRAL_F_SCORE = 0.5
-
-
-def _on_or_before(days: dict, target: str):
-    earlier = [d for d in days if d <= target]
-    return days[max(earlier)] if earlier else None
+from price_history import combined_history, compute_price_signals
+from strategies.signal_utils import has_fundamental, has_momentum, has_sentiment
 
 
-def momentum_from_history(price_history: dict, universe: dict, min_span_days: int = 45) -> dict:
-    """{ticker: {return_3m, return_1m}} dallo storico prezzi (stessa valuta, quindi niente FX).
+def enrich_signals(signals: dict, universe: dict, history: dict | None = None) -> dict:
+    """Copia dei segnali con il momentum reale al posto dei placeholder, piu' `status`.
 
-    Se lo storico copre meno di 3 mesi si usa il primo prezzo disponibile, purche' lo storico
-    copra almeno `min_span_days`; altrimenti il ticker viene omesso.
+    `history` e' lo storico prezzi (price_history.combined_history);
+    se omesso viene caricato da price_history.combined_history(). L'input non viene modificato.
     """
-    out = {}
-    for ticker in universe:
-        days = price_history.get(ticker) or {}
-        if len(days) < 2:
-            continue
-        ordered = sorted(days)
-        last_day, first_day = ordered[-1], ordered[0]
-        last_dt = datetime.strptime(last_day, "%Y-%m-%d")
-        span = (last_dt - datetime.strptime(first_day, "%Y-%m-%d")).days
-        if span < min_span_days:
-            continue
-        now = days[last_day]
-        p3 = _on_or_before(days, (last_dt - timedelta(days=91)).strftime("%Y-%m-%d")) or days[first_day]
-        p1 = _on_or_before(days, (last_dt - timedelta(days=30)).strftime("%Y-%m-%d")) or days[first_day]
-        if p3 > 0 and p1 > 0:
-            out[ticker] = {
-                "return_3m": round(now / p3 - 1.0, 4),
-                "return_1m": round(now / p1 - 1.0, 4),
-            }
-    return out
-
-
-def _is_placeholder_momentum(entry: dict | None) -> bool:
-    return not entry or (not entry.get("return_3m") and not entry.get("return_1m"))
-
-
-def enrich_signals(signals: dict, price_history: dict, universe: dict) -> dict:
-    """Copia dei segnali con il momentum reale al posto dei placeholder, piu' `status`."""
+    history = combined_history() if history is None else history
     enriched = dict(signals)
     momentum = dict(signals.get("momentum", {}))
-    computed = momentum_from_history(price_history, universe)
+    computed = compute_price_signals(
+        {t: s for t, s in history.items() if t in universe}
+    )["momentum"]
     filled = 0
     for ticker, values in computed.items():
-        if _is_placeholder_momentum(momentum.get(ticker)):
+        if not has_momentum(momentum.get(ticker)):
             momentum[ticker] = values
             filled += 1
     enriched["momentum"] = momentum
 
-    fundamentals = signals.get("fundamentals", {})
-    fundamentals_real = any(
-        v.get("f_score") not in (None, _NEUTRAL_F_SCORE) for v in fundamentals.values()
-    )
-    sentiment_real = any(v.get("num_articles", 0) > 0 for v in signals.get("sentiment", {}).values())
-    momentum_real = any(not _is_placeholder_momentum(v) for v in momentum.values())
+    tickers = list(universe)
     enriched["status"] = {
-        "fundamentals_real": fundamentals_real,
-        "sentiment_real": sentiment_real,
-        "momentum_real": momentum_real,
+        "fundamentals_real": any(
+            has_fundamental(signals.get("fundamentals", {}).get(t)) for t in tickers
+        ),
+        "sentiment_real": any(
+            has_sentiment(signals.get("sentiment", {}).get(t)) for t in tickers
+        ),
+        "momentum_real": any(has_momentum(momentum.get(t)) for t in tickers),
         "momentum_from_history": filled,
     }
     return enriched
 
 
 def merge_fundamentals(new: dict, old: dict) -> dict:
-    """Non sovrascrive dati reali precedenti con placeholder (fetch fallito)."""
+    """Non sovrascrive dati reali precedenti con voci senza dati (fetch fallito)."""
     merged = {}
     for ticker, entry in new.items():
-        is_placeholder = set(entry) <= {"f_score"} and entry.get("f_score") == _NEUTRAL_F_SCORE
         previous = old.get(ticker)
-        if is_placeholder and previous and previous.get("f_score") not in (None, _NEUTRAL_F_SCORE):
+        if not has_fundamental(entry) and has_fundamental(previous):
             merged[ticker] = previous
         else:
             merged[ticker] = entry

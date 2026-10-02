@@ -1,54 +1,53 @@
 import pytest
 
-from valuation import last_known_prices, mark_to_market
+from valuation import price_eur, value_positions_eur
 
-UNIVERSE = {
-    "AAA": {"currency": "USD"},
-    "BBB.MI": {"currency": "EUR"},
-    "CCC.L": {"currency": "GBp"},
+UNI = {
+    "US": {"currency": "USD"},
+    "UK": {"currency": "GBp"},
+    "IT": {"currency": "EUR"},
 }
-FX = {"USD": 0.9, "EUR": 1.0}
+FX = {"USD": 0.9, "GBp": 0.01, "EUR": 1.0}
 
 
-def _portfolio():
+def _pf(cash=100.0):
     return {
-        "metadata": {"current_cash": 50.0},
+        "metadata": {"current_cash": cash},
         "current_positions": {
-            "AAA": {"shares": 2, "avg_price": 8.0},
-            "BBB.MI": {"shares": 10, "avg_price": 4.0},
+            "US": {"shares": 2, "avg_price": 50.0},
+            "UK": {"shares": 3, "avg_price": 10.0},
+            "IT": {"shares": 4, "avg_price": 5.0},
         },
-        "iterations_log": [{"prices_used": {"BBB.MI": 5.0, "AAA": 11.0}}],
     }
 
 
-def test_last_known_prices_takes_latest_positive():
-    p = _portfolio()
-    p["iterations_log"].append({"prices_used": {"AAA": 12.0, "BBB.MI": 0}})
-    assert last_known_prices(p) == {"AAA": 12.0, "BBB.MI": 5.0}
+def test_current_price_converted_with_fx():
+    per, total = value_positions_eur(_pf(), UNI, {"US": 100, "UK": 2000, "IT": 6}, FX)
+    assert per == {"US": pytest.approx(180.0), "UK": pytest.approx(60.0), "IT": 24.0}
+    assert total == pytest.approx(180 + 60 + 24 + 100)
 
 
-def test_mark_to_market_live_prices():
-    total, values = mark_to_market(_portfolio(), {"AAA": 10.0, "BBB.MI": 6.0}, FX, UNIVERSE)
-    assert values == {"AAA": pytest.approx(18.0), "BBB.MI": pytest.approx(60.0)}
-    assert total == pytest.approx(128.0)
+def test_missing_price_uses_last_known_then_avg_price():
+    last = {"UK": 1000.0}
+    per, _ = value_positions_eur(_pf(), UNI, {"US": 100}, FX, last)
+    assert per["UK"] == pytest.approx(3 * 1000.0 * 0.01)  # ultimo prezzo noto
+    assert per["IT"] == pytest.approx(4 * 5.0)  # costo medio (gia' EUR)
 
 
-def test_missing_price_falls_back_to_last_known_not_zero():
-    total, values = mark_to_market(_portfolio(), {"AAA": 10.0}, FX, UNIVERSE)
-    assert values["BBB.MI"] == pytest.approx(50.0)  # 10 x ultimo prezzo noto (5.0)
-    assert total == pytest.approx(50 + 18 + 50)
-
-
-def test_no_history_falls_back_to_cost_basis():
-    p = _portfolio()
-    p["iterations_log"] = []
-    _, values = mark_to_market(p, {}, FX, UNIVERSE)
-    assert values["BBB.MI"] == pytest.approx(40.0)
-    assert values["AAA"] == pytest.approx(16.0)
-
-
-def test_stale_ticker_ignores_live_price():
-    _, values = mark_to_market(
-        _portfolio(), {"AAA": 10.0, "BBB.MI": 999.0}, FX, UNIVERSE, stale={"BBB.MI"}
+def test_failed_ticker_ignores_placeholder_price():
+    per, _ = value_positions_eur(
+        _pf(), UNI, {"US": 100, "UK": 2000, "IT": 100.0}, FX, {"IT": 6.0}, {"IT"}
     )
-    assert values["BBB.MI"] == pytest.approx(50.0)
+    assert per["IT"] == pytest.approx(4 * 6.0)  # non 4 * 100 (prezzo nominale)
+
+
+def test_no_position_is_zero_and_never_negative():
+    pf = _pf()
+    pf["current_positions"] = {}
+    per, total = value_positions_eur(pf, UNI, {}, FX)
+    assert all(v == 0.0 for v in per.values())
+    assert total == 100.0
+
+
+def test_price_eur_zero_price_treated_as_missing():
+    assert price_eur("A", "EUR", {"A": 0.0}, {"EUR": 1.0}, {"A": 7.0}, 3.0) == 7.0

@@ -43,10 +43,13 @@ TRANSACTION_COST_BPS = 10.0
 RISK_FREE_RATE = 0.02
 
 # Benchmark confrontati con le strategie (ticker Yahoo Finance -> etichetta).
+# Sono serie "total return" (prezzi aggiustati / ETF ad accumulazione): i dividendi sono
+# gia' reinvestiti. Quelli in valuta estera vengono convertiti in EUR con i cambi storici.
 BENCHMARKS = {
     "SWDA.MI": "MSCI World (EUR)",
-    "SPY": "S&P 500 (USD)",
+    "SPY": "S&P 500 (in EUR)",
 }
+BENCHMARK_CURRENCIES = {"SWDA.MI": "EUR", "SPY": "USD"}
 
 # Ticker Yahoo per lo storico dei cambi verso EUR (usati per ricostruire l'equity).
 FX_HISTORY_TICKERS = {"USD": "USDEUR=X", "GBP": "GBPEUR=X"}
