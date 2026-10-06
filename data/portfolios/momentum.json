@@ -2,9 +2,9 @@
   "strategy": "momentum",
   "metadata": {
     "initial_capital": 3000.0,
-    "current_cash": 113.56,
+    "current_cash": 553.19,
     "price_source": "investing.com(20/20)",
-    "fees_paid": 2.7387
+    "fees_paid": 3.679
   },
   "current_positions": {
     "AAPL": {
@@ -14,10 +14,6 @@
     "V": {
       "shares": 1,
       "avg_price": 288.7884
-    },
-    "JNJ": {
-      "shares": 1,
-      "avg_price": 238.5836
     },
     "GSK.L": {
       "shares": 1,
@@ -47,9 +43,9 @@
       "shares": 46,
       "avg_price": 6.645
     },
-    "MSFT": {
-      "shares": 1,
-      "avg_price": 461.9163
+    "RIO.L": {
+      "shares": 3,
+      "avg_price": 83.289
     }
   },
   "iterations_log": [
@@ -16759,6 +16755,110 @@
       },
       "stale_tickers": [],
       "fees_eur": 0.4619
+    },
+    {
+      "timestamp": "2026-10-06T13:15:11.067567+00:00",
+      "session": "sera",
+      "total_value_eur": 3067.13,
+      "current_cash": 553.19,
+      "positions": {
+        "AAPL": {
+          "shares": 1,
+          "avg_price": 258.7385
+        },
+        "V": {
+          "shares": 1,
+          "avg_price": 288.7884
+        },
+        "GSK.L": {
+          "shares": 1,
+          "avg_price": 22.5985
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8036
+        },
+        "AMZN": {
+          "shares": 1,
+          "avg_price": 233.4132
+        },
+        "NVDA": {
+          "shares": 1,
+          "avg_price": 210.5604
+        },
+        "BP.L": {
+          "shares": 46,
+          "avg_price": 6.5515
+        },
+        "ENI.MI": {
+          "shares": 12,
+          "avg_price": 24.02
+        },
+        "ISP.MI": {
+          "shares": 46,
+          "avg_price": 6.645
+        },
+        "RIO.L": {
+          "shares": 3,
+          "avg_price": 83.289
+        }
+      },
+      "prices_used": {
+        "AAPL": 333.69,
+        "MSFT": 517.53,
+        "GOOGL": 343.5,
+        "AMZN": 251.52,
+        "TSLA": 370.59,
+        "JPM": 332.38,
+        "NVDA": 233.95,
+        "JNJ": 256.03,
+        "V": 360.66,
+        "KO": 85.65,
+        "ULVR.L": 4483.5,
+        "HSBA.L": 1442.2,
+        "BP.L": 557.8,
+        "GSK.L": 1779.5,
+        "RIO.L": 7056.0,
+        "ENI.MI": 24.19,
+        "ISP.MI": 6.328,
+        "ENEL.MI": 8.799,
+        "LDO.MI": 47.39,
+        "MONC.MI": 43.7
+      },
+      "transactions": [
+        {
+          "action": "SELL",
+          "ticker": "MSFT",
+          "shares": 1,
+          "price_eur": 461.9163,
+          "total_proceeds_eur": 461.92,
+          "fee_eur": 0.4619
+        },
+        {
+          "action": "SELL",
+          "ticker": "JNJ",
+          "shares": 1,
+          "price_eur": 228.517,
+          "total_proceeds_eur": 228.52,
+          "fee_eur": 0.2285
+        },
+        {
+          "action": "BUY",
+          "ticker": "RIO.L",
+          "shares": 3,
+          "price_eur": 83.289,
+          "total_cost_eur": 249.87,
+          "fee_eur": 0.2499
+        }
+      ],
+      "reasoning": "AAPL: HOLD (deviation 0.0029 < 0.05)\nMSFT: SELL 1 @ 461.92EUR (deviation 0.0506, weight 0.100)\nGOOGL: HOLD (deviation 0.0000 < 0.05)\nAMZN: HOLD (deviation 0.0268 < 0.05)\nTSLA: HOLD (deviation 0.0000 < 0.05)\nJPM: HOLD (deviation 0.0000 < 0.05)\nNVDA: HOLD (deviation 0.0319 < 0.05)\nJNJ: SELL 1 @ 228.52EUR (deviation 0.0745, weight 0.000)\nV: HOLD (deviation 0.0049 < 0.05)\nKO: HOLD (deviation 0.0003 < 0.05)\nULVR.L: HOLD (deviation 0.0000 < 0.05)\nHSBA.L: HOLD (deviation 0.0000 < 0.05)\nBP.L: HOLD (deviation 0.0013 < 0.05)\nGSK.L: HOLD (deviation 0.0068 < 0.05)\nRIO.L: BUY 3 @ 83.29EUR (deviation 0.1000, weight 0.100)\nENI.MI: HOLD (deviation 0.0054 < 0.05)\nISP.MI: HOLD (deviation 0.0051 < 0.05)\nENEL.MI: HOLD (deviation 0.0000 < 0.05)\nLDO.MI: HOLD (deviation 0.0000 < 0.05)\nMONC.MI: HOLD (deviation 0.0000 < 0.05)",
+      "fx_rates": {
+        "EUR": 1.0,
+        "GBp": 0.011804,
+        "USD": 0.89254
+      },
+      "stale_tickers": [],
+      "fees_eur": 0.9403
     }
   ]
 }
