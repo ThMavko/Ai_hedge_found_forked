@@ -3,7 +3,7 @@
   "metadata": {
     "initial_capital": 3000.0,
     "current_cash": 187.96,
-    "price_source": "investing.com(20/20)"
+    "price_source": "fallback"
   },
   "current_positions": {
     "JNJ": {
@@ -19613,6 +19613,100 @@
       },
       "stale_tickers": [],
       "fees_eur": 0.0
+    },
+    {
+      "timestamp": "2026-10-09T00:32:21.553593+00:00",
+      "session": "sera",
+      "total_value_eur": 3390.11,
+      "current_cash": 187.96,
+      "positions": {
+        "JNJ": {
+          "shares": 1,
+          "avg_price": 210.191
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8974
+        },
+        "ISP.MI": {
+          "shares": 31,
+          "avg_price": 6.112
+        },
+        "ULVR.L": {
+          "shares": 5,
+          "avg_price": 53.5801
+        },
+        "GSK.L": {
+          "shares": 13,
+          "avg_price": 23.2069
+        },
+        "ENI.MI": {
+          "shares": 11,
+          "avg_price": 23.6416
+        },
+        "ENEL.MI": {
+          "shares": 22,
+          "avg_price": 9.4421
+        },
+        "AAPL": {
+          "shares": 1,
+          "avg_price": 293.3678
+        },
+        "HSBA.L": {
+          "shares": 7,
+          "avg_price": 17.8471
+        },
+        "BP.L": {
+          "shares": 2,
+          "avg_price": 6.0635
+        },
+        "LDO.MI": {
+          "shares": 3,
+          "avg_price": 51.9
+        },
+        "V": {
+          "shares": 1,
+          "avg_price": 327.1183
+        },
+        "RIO.L": {
+          "shares": 1,
+          "avg_price": 88.4635
+        },
+        "MSFT": {
+          "shares": 1,
+          "avg_price": 454.2776
+        }
+      },
+      "prices_used": {},
+      "transactions": [],
+      "reasoning": "ATTENZIONE: tutti i prezzi sono fallback. Trading disabilitato, solo report.",
+      "fx_rates": {
+        "EUR": 1.0,
+        "GBp": 0.011807,
+        "USD": 0.89397
+      },
+      "stale_tickers": [
+        "AAPL",
+        "AMZN",
+        "BP.L",
+        "ENEL.MI",
+        "ENI.MI",
+        "GOOGL",
+        "GSK.L",
+        "HSBA.L",
+        "ISP.MI",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LDO.MI",
+        "MONC.MI",
+        "MSFT",
+        "NVDA",
+        "RIO.L",
+        "TSLA",
+        "ULVR.L",
+        "V"
+      ]
     }
   ]
 }
