@@ -3,7 +3,7 @@
   "metadata": {
     "initial_capital": 3000.0,
     "current_cash": 76.36,
-    "price_source": "investing.com(20/20)",
+    "price_source": "fallback",
     "fees_paid": 6.958
   },
   "current_positions": {
@@ -17733,6 +17733,88 @@
       },
       "stale_tickers": [],
       "fees_eur": 0.4672
+    },
+    {
+      "timestamp": "2026-10-10T00:12:08.036909+00:00",
+      "session": "sera",
+      "total_value_eur": 3097.62,
+      "current_cash": 76.36,
+      "positions": {
+        "AAPL": {
+          "shares": 1,
+          "avg_price": 258.7385
+        },
+        "V": {
+          "shares": 1,
+          "avg_price": 288.7884
+        },
+        "GSK.L": {
+          "shares": 1,
+          "avg_price": 22.5985
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8036
+        },
+        "AMZN": {
+          "shares": 1,
+          "avg_price": 233.4132
+        },
+        "NVDA": {
+          "shares": 1,
+          "avg_price": 210.5604
+        },
+        "BP.L": {
+          "shares": 46,
+          "avg_price": 6.5515
+        },
+        "ENI.MI": {
+          "shares": 12,
+          "avg_price": 24.02
+        },
+        "ISP.MI": {
+          "shares": 46,
+          "avg_price": 6.645
+        },
+        "RIO.L": {
+          "shares": 3,
+          "avg_price": 83.289
+        },
+        "MSFT": {
+          "shares": 1,
+          "avg_price": 467.1976
+        }
+      },
+      "prices_used": {},
+      "transactions": [],
+      "reasoning": "ATTENZIONE: tutti i prezzi sono fallback. Trading disabilitato, solo report.",
+      "fx_rates": {
+        "EUR": 1.0,
+        "GBp": 0.011798,
+        "USD": 0.89238
+      },
+      "stale_tickers": [
+        "AAPL",
+        "AMZN",
+        "BP.L",
+        "ENEL.MI",
+        "ENI.MI",
+        "GOOGL",
+        "GSK.L",
+        "HSBA.L",
+        "ISP.MI",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LDO.MI",
+        "MONC.MI",
+        "MSFT",
+        "NVDA",
+        "RIO.L",
+        "TSLA",
+        "ULVR.L",
+        "V"
+      ]
     }
   ]
 }
