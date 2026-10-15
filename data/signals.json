@@ -163,190 +163,350 @@
   },
   "fundamentals": {
     "AAPL": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 39.150684,
+      "pb_ratio": 46.597824,
+      "roe": 1.4875101,
+      "debt_to_equity": 78.445,
+      "market_cap": 5005219725312,
+      "revenue_growth": 0.164,
+      "f_score": 0.5166,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "MSFT": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 30.067043,
+      "pb_ratio": 8.959792,
+      "roe": 0.34039003,
+      "debt_to_equity": 29.118,
+      "market_cap": 3962939637760,
+      "revenue_growth": 0.177,
+      "f_score": 0.5673,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "GOOGL": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 17.754852,
+      "pb_ratio": 6.8303995,
+      "roe": 0.48676,
+      "debt_to_equity": 18.859,
+      "market_cap": 4251614707712,
+      "revenue_growth": 0.242,
+      "f_score": 0.6885,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "AMZN": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 20.809174,
+      "pb_ratio": 4.9667687,
+      "roe": 0.30558002,
+      "debt_to_equity": 45.617,
+      "market_cap": 2740586545152,
+      "revenue_growth": 0.196,
+      "f_score": 0.6088,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "TSLA": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 346.37738,
+      "pb_ratio": 16.692884,
+      "roe": 0.046669997,
+      "debt_to_equity": 18.373,
+      "market_cap": 1450115858432,
+      "revenue_growth": 0.255,
+      "f_score": 0.2904,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "JPM": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 13.900497,
+      "pb_ratio": 2.534298,
+      "roe": 0.18013,
+      "debt_to_equity": null,
+      "market_cap": 890369605632,
+      "revenue_growth": 0.102,
+      "f_score": 0.7953,
+      "metrics_used": 2,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "NVDA": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 28.89034,
+      "pb_ratio": 23.336498,
+      "roe": 1.17211,
+      "debt_to_equity": 16.971,
+      "market_cap": 5343730991104,
+      "revenue_growth": 1.059,
+      "f_score": 0.6105,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "JNJ": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 28.820658,
+      "pb_ratio": 7.1961794,
+      "roe": null,
+      "debt_to_equity": 57.709,
+      "market_cap": 611897311232,
+      "revenue_growth": 0.059,
+      "f_score": 0.542,
+      "metrics_used": 2,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "V": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 33.7149,
+      "pb_ratio": 20.743507,
+      "roe": 0.6119,
+      "debt_to_equity": 67.821,
+      "market_cap": 734853136384,
+      "revenue_growth": 0.144,
+      "f_score": 0.6064,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "KO": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 27.561562,
+      "pb_ratio": 10.92489,
+      "roe": 0.42054,
+      "debt_to_equity": 115.519,
+      "market_cap": 394887954432,
+      "revenue_growth": 0.067,
+      "f_score": 0.5253,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "ULVR.L": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 13.216802,
+      "pb_ratio": 7.673685,
+      "roe": 0.31869,
+      "debt_to_equity": 175.397,
+      "market_cap": 105028100096,
+      "revenue_growth": 0.005,
+      "f_score": 0.7539,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "HSBA.L": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 13.742308,
+      "pb_ratio": 1.8797426,
+      "roe": 0.13104999,
+      "debt_to_equity": null,
+      "market_cap": 244392378368,
+      "revenue_growth": 0.254,
+      "f_score": 0.6997,
+      "metrics_used": 2,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "BP.L": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 23.523077,
+      "pb_ratio": 2.1537614,
+      "roe": 0.08868,
+      "debt_to_equity": 95.123,
+      "market_cap": 94513897472,
+      "revenue_growth": 0.482,
+      "f_score": 0.6071,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "GSK.L": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 14.841462,
+      "pb_ratio": 4.1450953,
+      "roe": 0.33383,
+      "debt_to_equity": 106.497,
+      "market_cap": 73148342272,
+      "revenue_growth": 0.053,
+      "f_score": 0.8146,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "RIO.L": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 12.1,
+      "pb_ratio": 2.190841,
+      "roe": 0.19312,
+      "debt_to_equity": 31.872,
+      "market_cap": 108236226560,
+      "revenue_growth": 0.155,
+      "f_score": 0.8019,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "ENI.MI": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 20.849594,
+      "pb_ratio": 1.6247466,
+      "roe": 0.10901,
+      "debt_to_equity": 64.975,
+      "market_cap": 73444122624,
+      "revenue_growth": 0.185,
+      "f_score": 0.4374,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "ISP.MI": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 11.048214,
+      "pb_ratio": 1.5823529,
+      "roe": 0.14261,
+      "debt_to_equity": null,
+      "market_cap": 106986217472,
+      "revenue_growth": 0.064,
+      "f_score": 0.7677,
+      "metrics_used": 2,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "ENEL.MI": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 21.735714,
+      "pb_ratio": 3.6692123,
+      "roe": 0.122559994,
+      "debt_to_equity": 147.743,
+      "market_cap": 90565738496,
+      "revenue_growth": 0.085,
+      "f_score": 0.3401,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "LDO.MI": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 23.463055,
+      "pb_ratio": 2.8457909,
+      "roe": 0.11893,
+      "debt_to_equity": 41.533,
+      "market_cap": 27472859136,
+      "revenue_growth": 0.167,
+      "f_score": 0.6536,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     },
     "MONC.MI": {
-      "error": "Too Many Requests. Rate limited. Try after a while."
+      "pe_ratio": 19.029789,
+      "pb_ratio": 3.333582,
+      "roe": 0.18122,
+      "debt_to_equity": 33.88,
+      "market_cap": 12163381248,
+      "revenue_growth": 0.052,
+      "f_score": 0.8136,
+      "metrics_used": 4,
+      "source": "yfinance",
+      "fetched_at": "2026-10-15T10:14:40.680494+00:00"
     }
   },
   "momentum": {
     "AAPL": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0398,
-      "return_3m": 0.0982
+      "return_3m": 0.0285,
+      "return_1m": 0.0317,
+      "source": "yfinance"
     },
     "MSFT": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.1094,
-      "return_3m": 0.4312
+      "return_3m": 0.3577,
+      "return_1m": 0.0885,
+      "source": "yfinance"
     },
     "GOOGL": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0536,
-      "return_3m": -0.0074
+      "return_3m": 0.0032,
+      "return_1m": 0.0139,
+      "source": "yfinance"
     },
     "AMZN": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0204,
-      "return_3m": 0.0587
+      "return_3m": 0.0277,
+      "return_1m": 0.033,
+      "source": "yfinance"
     },
     "TSLA": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0225,
-      "return_3m": -0.0569
+      "return_3m": -0.0359,
+      "return_1m": 0.0254,
+      "source": "yfinance"
     },
     "JPM": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": -0.0691,
-      "return_3m": -0.0329
+      "return_3m": -0.0122,
+      "return_1m": -0.0343,
+      "source": "yfinance"
     },
     "NVDA": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0351,
-      "return_3m": 0.068
+      "return_3m": 0.0924,
+      "return_1m": 0.0346,
+      "source": "yfinance"
     },
     "JNJ": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": -0.0576,
-      "return_3m": -0.0092
+      "return_3m": 0.0084,
+      "return_1m": -0.05,
+      "source": "yfinance"
     },
     "V": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0566,
-      "return_3m": 0.1014
+      "return_3m": 0.0937,
+      "return_1m": 0.0553,
+      "source": "yfinance"
     },
     "KO": {
-      "n_obs": 93,
-      "source": "price_history",
-      "return_1m": 0.0237,
-      "return_3m": 0.0879
+      "return_3m": 0.132,
+      "return_1m": 0.0445,
+      "source": "yfinance"
     },
     "ULVR.L": {
-      "n_obs": 95,
-      "source": "price_history",
-      "return_1m": 0.0426,
-      "return_3m": 0.0399
+      "return_3m": 0.0513,
+      "return_1m": 0.0527,
+      "source": "yfinance"
     },
     "HSBA.L": {
-      "n_obs": 95,
-      "source": "price_history",
-      "return_1m": -0.0778,
-      "return_3m": -0.039
+      "return_3m": -0.0348,
+      "return_1m": -0.0704,
+      "source": "yfinance"
     },
     "BP.L": {
-      "n_obs": 95,
-      "source": "price_history",
-      "return_1m": 0.0728,
-      "return_3m": 0.1728
+      "return_3m": 0.172,
+      "return_1m": 0.0844,
+      "source": "yfinance"
     },
     "GSK.L": {
-      "n_obs": 95,
-      "source": "price_history",
-      "return_1m": -0.004,
-      "return_3m": -0.0817
+      "return_3m": -0.0299,
+      "return_1m": -0.0392,
+      "source": "yfinance"
     },
     "RIO.L": {
-      "n_obs": 95,
-      "source": "price_history",
-      "return_1m": -0.0434,
-      "return_3m": 0.0144
+      "return_3m": 0.0044,
+      "return_1m": -0.0916,
+      "source": "yfinance"
     },
     "ENI.MI": {
-      "n_obs": 96,
-      "source": "price_history",
-      "return_1m": 0.0803,
-      "return_3m": 0.2201
+      "return_3m": 0.186,
+      "return_1m": 0.0767,
+      "source": "yfinance"
     },
     "ISP.MI": {
-      "n_obs": 96,
-      "source": "price_history",
-      "return_1m": -0.0916,
-      "return_3m": -0.0211
+      "return_3m": -0.0283,
+      "return_1m": -0.092,
+      "source": "yfinance"
     },
     "ENEL.MI": {
-      "n_obs": 96,
-      "source": "price_history",
-      "return_1m": 0.0045,
-      "return_3m": -0.0916
+      "return_3m": -0.0731,
+      "return_1m": 0.0087,
+      "source": "yfinance"
     },
     "LDO.MI": {
-      "n_obs": 96,
-      "source": "price_history",
-      "return_1m": -0.058,
-      "return_3m": -0.0649
+      "return_3m": -0.0598,
+      "return_1m": -0.0604,
+      "source": "yfinance"
     },
     "MONC.MI": {
-      "n_obs": 96,
-      "source": "price_history",
-      "return_1m": -0.0284,
-      "return_3m": -0.1439
+      "return_3m": -0.1296,
+      "return_1m": 0.0166,
+      "source": "yfinance"
     }
   },
-  "sentiment_updated": "2026-10-14T10:31:26.433876+00:00",
-  "fundamentals_updated": "2026-10-02T11:14:54.403121+00:00",
+  "sentiment_updated": "2026-10-15T10:14:58.061576+00:00",
+  "fundamentals_updated": "2026-10-15T10:14:57.830787+00:00",
   "volatility": {
     "AAPL": {
       "vol_60d": 0.2611
