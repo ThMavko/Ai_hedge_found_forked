@@ -405,174 +405,194 @@
   },
   "momentum": {
     "AAPL": {
-      "return_3m": 0.0419,
-      "return_1m": 0.0537,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": 0.024,
+      "return_3m": 0.066
     },
     "MSFT": {
-      "return_3m": 0.1801,
-      "return_1m": 0.044,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": 0.0592,
+      "return_3m": 0.3638
     },
     "GOOGL": {
-      "return_3m": -0.0386,
-      "return_1m": -0.0597,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": -0.0969,
+      "return_3m": -0.0623
     },
     "AMZN": {
-      "return_3m": 0.0747,
-      "return_1m": 0.0261,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": -0.0207,
+      "return_3m": 0.0337
     },
     "TSLA": {
-      "return_3m": 0.3193,
-      "return_1m": 0.1548,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": 0.0857,
+      "return_3m": 0.0894
     },
     "JPM": {
-      "return_3m": -0.0381,
-      "return_1m": 0.0074,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": -0.0462,
+      "return_3m": -0.0357
     },
     "NVDA": {
-      "return_3m": 0.1187,
-      "return_1m": -0.0408,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": -0.0415,
+      "return_3m": 0.0289
     },
     "JNJ": {
-      "return_3m": 0.0556,
-      "return_1m": 0.0043,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": -0.0027,
+      "return_3m": 0.0564
     },
     "V": {
-      "return_3m": 0.0992,
-      "return_1m": 0.0983,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": 0.0863,
+      "return_3m": 0.1392
     },
     "KO": {
-      "return_3m": 0.0365,
-      "return_1m": 0.05,
-      "source": "yfinance"
+      "n_obs": 99,
+      "source": "price_history",
+      "return_1m": 0.0466,
+      "return_3m": 0.1159
     },
     "ULVR.L": {
-      "return_3m": 0.0013,
-      "return_1m": 0.0316,
-      "source": "yfinance"
+      "n_obs": 101,
+      "source": "price_history",
+      "return_1m": 0.0539,
+      "return_3m": 0.0604
     },
     "HSBA.L": {
-      "return_3m": -0.1833,
-      "return_1m": -0.1406,
-      "source": "yfinance"
+      "n_obs": 101,
+      "source": "price_history",
+      "return_1m": -0.158,
+      "return_3m": -0.1619
     },
     "BP.L": {
-      "return_3m": 0.1107,
-      "return_1m": 0.1169,
-      "source": "yfinance"
+      "n_obs": 101,
+      "source": "price_history",
+      "return_1m": 0.1286,
+      "return_3m": 0.1362
     },
     "GSK.L": {
-      "return_3m": -0.0727,
-      "return_1m": -0.0224,
-      "source": "yfinance"
+      "n_obs": 101,
+      "source": "price_history",
+      "return_1m": 0.0065,
+      "return_3m": 0.0069
     },
     "RIO.L": {
-      "return_3m": -0.1062,
-      "return_1m": -0.0969,
-      "source": "yfinance"
+      "n_obs": 101,
+      "source": "price_history",
+      "return_1m": -0.1142,
+      "return_3m": -0.0727
     },
     "ENI.MI": {
-      "return_3m": 0.1264,
-      "return_1m": 0.0987,
-      "source": "yfinance"
+      "n_obs": 102,
+      "source": "price_history",
+      "return_1m": 0.1272,
+      "return_3m": 0.1651
     },
     "ISP.MI": {
-      "return_3m": -0.1071,
-      "return_1m": -0.1002,
-      "source": "yfinance"
+      "n_obs": 102,
+      "source": "price_history",
+      "return_1m": -0.1118,
+      "return_3m": -0.0412
     },
     "ENEL.MI": {
-      "return_3m": -0.0647,
-      "return_1m": 0.0599,
-      "source": "yfinance"
+      "n_obs": 102,
+      "source": "price_history",
+      "return_1m": 0.04,
+      "return_3m": -0.0521
     },
     "LDO.MI": {
-      "return_3m": -0.0911,
-      "return_1m": 0.0148,
-      "source": "yfinance"
+      "n_obs": 102,
+      "source": "price_history",
+      "return_1m": -0.0129,
+      "return_3m": -0.0371
     },
     "MONC.MI": {
-      "return_3m": -0.156,
-      "return_1m": -0.052,
-      "source": "yfinance"
+      "n_obs": 102,
+      "source": "price_history",
+      "return_1m": -0.0313,
+      "return_3m": -0.1105
     }
   },
-  "sentiment_updated": "2026-10-28T11:32:06.855173+00:00",
+  "sentiment_updated": "2026-10-29T11:43:01.693171+00:00",
   "fundamentals_updated": "2026-10-15T10:14:57.830787+00:00",
   "volatility": {
     "AAPL": {
-      "vol_60d": 0.2611
+      "vol_60d": 0.2509
     },
     "MSFT": {
-      "vol_60d": 0.4106
+      "vol_60d": 0.41
     },
     "GOOGL": {
-      "vol_60d": 0.3247
+      "vol_60d": 0.3269
     },
     "AMZN": {
-      "vol_60d": 0.4471
+      "vol_60d": 0.449
     },
     "TSLA": {
-      "vol_60d": 0.4541
+      "vol_60d": 0.4535
     },
     "JPM": {
-      "vol_60d": 0.1746
+      "vol_60d": 0.1767
     },
     "NVDA": {
-      "vol_60d": 0.3922
+      "vol_60d": 0.3776
     },
     "JNJ": {
-      "vol_60d": 0.2263
+      "vol_60d": 0.2269
     },
     "V": {
-      "vol_60d": 0.2141
+      "vol_60d": 0.2115
     },
     "KO": {
-      "vol_60d": 0.1862
+      "vol_60d": 0.1825
     },
     "ULVR.L": {
-      "vol_60d": 0.2626
+      "vol_60d": 0.2708
     },
     "HSBA.L": {
-      "vol_60d": 0.2485
+      "vol_60d": 0.2647
     },
     "BP.L": {
-      "vol_60d": 0.3132
+      "vol_60d": 0.31
     },
     "GSK.L": {
-      "vol_60d": 0.2584
+      "vol_60d": 0.2889
     },
     "RIO.L": {
-      "vol_60d": 0.2764
+      "vol_60d": 0.2811
     },
     "ENEL.MI": {
-      "vol_60d": 0.1603
+      "vol_60d": 0.1602
     },
     "ENI.MI": {
-      "vol_60d": 0.2957
+      "vol_60d": 0.2911
     },
     "ISP.MI": {
-      "vol_60d": 0.2637
+      "vol_60d": 0.2632
     },
     "LDO.MI": {
-      "vol_60d": 0.3047
+      "vol_60d": 0.301
     },
     "MONC.MI": {
-      "vol_60d": 0.2383
+      "vol_60d": 0.2379
     },
     "SPY": {
-      "vol_60d": 0.1036
+      "vol_60d": 0.0934
     },
     "SWDA.MI": {
-      "vol_60d": 0.0926
+      "vol_60d": 0.0928
     }
   },
   "trend": {}
