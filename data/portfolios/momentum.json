@@ -2,15 +2,11 @@
   "strategy": "momentum",
   "metadata": {
     "initial_capital": 3000.0,
-    "current_cash": 31.49,
-    "price_source": "fallback",
-    "fees_paid": 12.9832
+    "current_cash": 522.35,
+    "price_source": "investing.com(20/20)",
+    "fees_paid": 14.0858
   },
   "current_positions": {
-    "AAPL": {
-      "shares": 1,
-      "avg_price": 258.7385
-    },
     "V": {
       "shares": 1,
       "avg_price": 288.7884
@@ -35,10 +31,6 @@
       "shares": 12,
       "avg_price": 24.02
     },
-    "MSFT": {
-      "shares": 1,
-      "avg_price": 469.678
-    },
     "JNJ": {
       "shares": 1,
       "avg_price": 235.1989
@@ -50,6 +42,10 @@
     "ULVR.L": {
       "shares": 3,
       "avg_price": 58.392
+    },
+    "NVDA": {
+      "shares": 2,
+      "avg_price": 152.6676
     }
   },
   "iterations_log": [
@@ -23024,6 +23020,110 @@
         "ULVR.L",
         "V"
       ]
+    },
+    {
+      "timestamp": "2026-11-10T14:48:01.755832+00:00",
+      "session": "sera",
+      "total_value_eur": 3170.5,
+      "current_cash": 522.35,
+      "positions": {
+        "V": {
+          "shares": 1,
+          "avg_price": 288.7884
+        },
+        "GSK.L": {
+          "shares": 1,
+          "avg_price": 22.5985
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8036
+        },
+        "AMZN": {
+          "shares": 1,
+          "avg_price": 233.4132
+        },
+        "BP.L": {
+          "shares": 46,
+          "avg_price": 6.5515
+        },
+        "ENI.MI": {
+          "shares": 12,
+          "avg_price": 24.02
+        },
+        "JNJ": {
+          "shares": 1,
+          "avg_price": 235.1989
+        },
+        "TSLA": {
+          "shares": 1,
+          "avg_price": 365.9928
+        },
+        "ULVR.L": {
+          "shares": 3,
+          "avg_price": 58.392
+        },
+        "NVDA": {
+          "shares": 2,
+          "avg_price": 152.6676
+        }
+      },
+      "prices_used": {
+        "AAPL": 350.48,
+        "AMZN": 270.28,
+        "BP.L": 541.3,
+        "ENEL.MI": 9.89,
+        "ENI.MI": 24.505,
+        "GOOGL": 288.825,
+        "GSK.L": 1933.5,
+        "HSBA.L": 1350.6,
+        "ISP.MI": 6.448,
+        "JNJ": 281.53,
+        "JPM": 343.4,
+        "KO": 96.22,
+        "LDO.MI": 51.42,
+        "MONC.MI": 44.83,
+        "MSFT": 541.93,
+        "NVDA": 170.88,
+        "RIO.L": 6322.0,
+        "TSLA": 374.74,
+        "ULVR.L": 4971.5,
+        "V": 421.65
+      },
+      "transactions": [
+        {
+          "action": "SELL",
+          "ticker": "AAPL",
+          "shares": 1,
+          "price_eur": 313.1259,
+          "total_proceeds_eur": 313.13,
+          "fee_eur": 0.3131
+        },
+        {
+          "action": "SELL",
+          "ticker": "MSFT",
+          "shares": 1,
+          "price_eur": 484.1711,
+          "total_proceeds_eur": 484.17,
+          "fee_eur": 0.4842
+        },
+        {
+          "action": "BUY",
+          "ticker": "NVDA",
+          "shares": 2,
+          "price_eur": 152.6676,
+          "total_cost_eur": 305.34,
+          "fee_eur": 0.3053
+        }
+      ],
+      "reasoning": "AAPL: SELL 1 @ 313.13EUR (deviation 0.0987, weight 0.000)\nMSFT: SELL 1 @ 484.17EUR (deviation 0.0527, weight 0.100)\nGOOGL: HOLD (deviation 0.0000 < 0.05)\nAMZN: HOLD (deviation 0.0239 < 0.05)\nTSLA: HOLD (deviation 0.0056 < 0.05)\nJPM: HOLD (deviation 0.0000 < 0.05)\nNVDA: BUY 2 @ 152.67EUR (deviation 0.1000, weight 0.100)\nJNJ: HOLD (deviation 0.0207 < 0.05)\nV: HOLD (deviation 0.0188 < 0.05)\nKO: HOLD (deviation 0.0084 < 0.05)\nULVR.L: HOLD (deviation 0.0436 < 0.05)\nHSBA.L: HOLD (deviation 0.0000 < 0.05)\nBP.L: HOLD (deviation 0.0059 < 0.05)\nGSK.L: HOLD (deviation 0.0073 < 0.05)\nRIO.L: HOLD (deviation 0.0000 < 0.05)\nENI.MI: HOLD (deviation 0.0073 < 0.05)\nISP.MI: HOLD (deviation 0.0000 < 0.05)\nENEL.MI: HOLD (deviation 0.0000 < 0.05)\nLDO.MI: HOLD (deviation 0.0000 < 0.05)\nMONC.MI: HOLD (deviation 0.0000 < 0.05)",
+      "fx_rates": {
+        "EUR": 1.0,
+        "GBp": 0.011986,
+        "USD": 0.89342
+      },
+      "stale_tickers": [],
+      "fees_eur": 1.1026
     }
   ]
 }
