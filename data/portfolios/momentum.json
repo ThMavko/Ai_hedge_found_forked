@@ -23302,6 +23302,88 @@
         "ULVR.L",
         "V"
       ]
+    },
+    {
+      "timestamp": "2026-11-11T14:11:04.827710+00:00",
+      "session": "sera",
+      "total_value_eur": 3164.95,
+      "current_cash": 37.69,
+      "positions": {
+        "V": {
+          "shares": 1,
+          "avg_price": 288.7884
+        },
+        "GSK.L": {
+          "shares": 1,
+          "avg_price": 22.5985
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8036
+        },
+        "AMZN": {
+          "shares": 1,
+          "avg_price": 233.4132
+        },
+        "BP.L": {
+          "shares": 46,
+          "avg_price": 6.5515
+        },
+        "ENI.MI": {
+          "shares": 12,
+          "avg_price": 24.02
+        },
+        "JNJ": {
+          "shares": 1,
+          "avg_price": 235.1989
+        },
+        "TSLA": {
+          "shares": 1,
+          "avg_price": 365.9928
+        },
+        "ULVR.L": {
+          "shares": 3,
+          "avg_price": 58.392
+        },
+        "NVDA": {
+          "shares": 2,
+          "avg_price": 152.6676
+        },
+        "MSFT": {
+          "shares": 1,
+          "avg_price": 484.1711
+        }
+      },
+      "prices_used": {},
+      "transactions": [],
+      "reasoning": "ATTENZIONE: tutti i prezzi sono fallback. Trading disabilitato, solo report.",
+      "fx_rates": {
+        "GBp": 0.01197,
+        "USD": 0.89174,
+        "EUR": 1.0
+      },
+      "stale_tickers": [
+        "AAPL",
+        "AMZN",
+        "BP.L",
+        "ENEL.MI",
+        "ENI.MI",
+        "GOOGL",
+        "GSK.L",
+        "HSBA.L",
+        "ISP.MI",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LDO.MI",
+        "MONC.MI",
+        "MSFT",
+        "NVDA",
+        "RIO.L",
+        "TSLA",
+        "ULVR.L",
+        "V"
+      ]
     }
   ]
 }
