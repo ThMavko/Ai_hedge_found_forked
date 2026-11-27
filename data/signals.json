@@ -405,127 +405,107 @@
   },
   "momentum": {
     "AAPL": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.0654,
-      "return_3m": 0.1608
+      "return_3m": 0.1317,
+      "return_1m": 0.0277,
+      "source": "yfinance"
     },
     "MSFT": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": -0.0128,
-      "return_3m": 0.0401
+      "return_3m": -0.0318,
+      "return_1m": -0.0735,
+      "source": "yfinance"
     },
     "GOOGL": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": -0.1716,
-      "return_3m": -0.2493
+      "return_3m": -0.2017,
+      "return_1m": -0.0461,
+      "source": "yfinance"
     },
     "AMZN": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.0389,
-      "return_3m": -0.092
+      "return_3m": -0.033,
+      "return_1m": 0.0304,
+      "source": "yfinance"
     },
     "TSLA": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.0734,
-      "return_3m": 0.1802
+      "return_3m": 0.0796,
+      "return_1m": -0.015,
+      "source": "yfinance"
     },
     "JPM": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": -0.0097,
-      "return_3m": -0.0643
+      "return_3m": -0.0883,
+      "return_1m": -0.06,
+      "source": "yfinance"
     },
     "NVDA": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": -0.3266,
-      "return_3m": -0.2468
+      "return_3m": -0.3345,
+      "return_1m": -0.3131,
+      "source": "yfinance"
     },
     "JNJ": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.0775,
-      "return_3m": 0.1009
+      "return_3m": 0.0391,
+      "return_1m": 0.0038,
+      "source": "yfinance"
     },
     "V": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.1582,
-      "return_3m": 0.1419
+      "return_3m": 0.1386,
+      "return_1m": 0.0522,
+      "source": "yfinance"
     },
     "KO": {
-      "n_obs": 107,
-      "source": "price_history",
-      "return_1m": 0.1474,
-      "return_3m": 0.1441
+      "return_3m": 0.1031,
+      "return_1m": 0.0475,
+      "source": "yfinance"
     },
     "ULVR.L": {
-      "n_obs": 109,
-      "source": "price_history",
-      "return_1m": 0.1027,
-      "return_3m": 0.039
+      "return_3m": 0.0548,
+      "return_1m": 0.0357,
+      "source": "yfinance"
     },
     "HSBA.L": {
-      "n_obs": 109,
-      "source": "price_history",
-      "return_1m": -0.0816,
-      "return_3m": -0.1737
+      "return_3m": -0.1801,
+      "return_1m": -0.0079,
+      "source": "yfinance"
     },
     "BP.L": {
-      "n_obs": 109,
-      "source": "price_history",
-      "return_1m": 0.0196,
-      "return_3m": 0.0289
+      "return_3m": 0.0164,
+      "return_1m": -0.1212,
+      "source": "yfinance"
     },
     "GSK.L": {
-      "n_obs": 109,
-      "source": "price_history",
-      "return_1m": 0.0412,
-      "return_3m": -0.0211
+      "return_3m": 0.0377,
+      "return_1m": 0.0413,
+      "source": "yfinance"
     },
     "RIO.L": {
-      "n_obs": 109,
-      "source": "price_history",
-      "return_1m": -0.1296,
-      "return_3m": -0.146
+      "return_3m": -0.2357,
+      "return_1m": -0.0497,
+      "source": "yfinance"
     },
     "ENI.MI": {
-      "n_obs": 110,
-      "source": "price_history",
-      "return_1m": 0.0658,
-      "return_3m": 0.1141
+      "return_3m": 0.0527,
+      "return_1m": -0.0867,
+      "source": "yfinance"
     },
     "ISP.MI": {
-      "n_obs": 110,
-      "source": "price_history",
-      "return_1m": -0.0295,
-      "return_3m": -0.0881
+      "return_3m": -0.1079,
+      "return_1m": 0.0079,
+      "source": "yfinance"
     },
     "ENEL.MI": {
-      "n_obs": 110,
-      "source": "price_history",
-      "return_1m": 0.1171,
-      "return_3m": -0.0312
+      "return_3m": 0.0722,
+      "return_1m": 0.0357,
+      "source": "yfinance"
     },
     "LDO.MI": {
-      "n_obs": 110,
-      "source": "price_history",
-      "return_1m": 0.059,
-      "return_3m": -0.1045
+      "return_3m": 0.014,
+      "return_1m": 0.0068,
+      "source": "yfinance"
     },
     "MONC.MI": {
-      "n_obs": 110,
-      "source": "price_history",
-      "return_1m": -0.0422,
-      "return_3m": -0.1764
+      "return_3m": -0.1347,
+      "return_1m": -0.0661,
+      "source": "yfinance"
     }
   },
-  "sentiment_updated": "2026-11-26T15:39:23.822415+00:00",
+  "sentiment_updated": "2026-11-27T15:29:44.316181+00:00",
   "fundamentals_updated": "2026-11-18T14:28:47.690862+00:00",
   "volatility": {
     "AAPL": {
