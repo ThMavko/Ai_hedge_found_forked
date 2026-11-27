@@ -2,9 +2,9 @@
   "strategy": "equal_weight",
   "metadata": {
     "initial_capital": 3000.0,
-    "current_cash": 600.65,
-    "price_source": "fallback",
-    "fees_paid": 14.7257
+    "current_cash": 153.15,
+    "price_source": "investing.com(20/20)",
+    "fees_paid": 15.1728
   },
   "current_positions": {
     "AAPL": {
@@ -74,6 +74,10 @@
     "GOOGL": {
       "shares": 1,
       "avg_price": 309.4533
+    },
+    "MSFT": {
+      "shares": 1,
+      "avg_price": 447.0516
     }
   },
   "iterations_log": [
@@ -36322,6 +36326,126 @@
         "ULVR.L",
         "V"
       ]
+    },
+    {
+      "timestamp": "2026-11-27T16:33:42.287361+00:00",
+      "session": "pomeriggio",
+      "total_value_eur": 3303.33,
+      "current_cash": 153.15,
+      "positions": {
+        "AAPL": {
+          "shares": 1,
+          "avg_price": 258.7385
+        },
+        "AMZN": {
+          "shares": 1,
+          "avg_price": 205.8215
+        },
+        "JPM": {
+          "shares": 1,
+          "avg_price": 293.7645
+        },
+        "NVDA": {
+          "shares": 1,
+          "avg_price": 175.8684
+        },
+        "JNJ": {
+          "shares": 1,
+          "avg_price": 210.191
+        },
+        "KO": {
+          "shares": 2,
+          "avg_price": 70.6058
+        },
+        "ENI.MI": {
+          "shares": 7,
+          "avg_price": 20.795
+        },
+        "ISP.MI": {
+          "shares": 17,
+          "avg_price": 6.093
+        },
+        "ENEL.MI": {
+          "shares": 15,
+          "avg_price": 9.867
+        },
+        "LDO.MI": {
+          "shares": 3,
+          "avg_price": 48.03
+        },
+        "MONC.MI": {
+          "shares": 2,
+          "avg_price": 51.24
+        },
+        "ULVR.L": {
+          "shares": 2,
+          "avg_price": 53.5801
+        },
+        "HSBA.L": {
+          "shares": 3,
+          "avg_price": 16.9112
+        },
+        "BP.L": {
+          "shares": 2,
+          "avg_price": 5.6259
+        },
+        "GSK.L": {
+          "shares": 6,
+          "avg_price": 22.982
+        },
+        "RIO.L": {
+          "shares": 1,
+          "avg_price": 83.2611
+        },
+        "GOOGL": {
+          "shares": 1,
+          "avg_price": 309.4533
+        },
+        "MSFT": {
+          "shares": 1,
+          "avg_price": 447.0516
+        }
+      },
+      "prices_used": {
+        "AAPL": 357.4571,
+        "AMZN": 253.74,
+        "BP.L": 550.1,
+        "ENEL.MI": 9.665,
+        "ENI.MI": 24.45,
+        "GOOGL": 273.55,
+        "GSK.L": 1940.0,
+        "HSBA.L": 1270.0,
+        "ISP.MI": 5.71,
+        "JNJ": 275.7,
+        "JPM": 323.93,
+        "KO": 97.4,
+        "LDO.MI": 52.07,
+        "MONC.MI": 40.4,
+        "MSFT": 490.64,
+        "NVDA": 148.91,
+        "RIO.L": 5802.0,
+        "TSLA": 397.67,
+        "ULVR.L": 5040.0,
+        "V": 430.32
+      },
+      "transactions": [
+        {
+          "action": "BUY",
+          "ticker": "MSFT",
+          "shares": 1,
+          "price_eur": 447.0516,
+          "total_cost_eur": 447.05,
+          "fee_eur": 0.4471
+        }
+      ],
+      "reasoning": "AAPL: HOLD (deviation 0.0486 < 0.05)\nMSFT: BUY 1 @ 447.05EUR (deviation 0.0500, weight 0.050)\nGOOGL: HOLD (deviation 0.0254 < 0.05)\nAMZN: HOLD (deviation 0.0200 < 0.05)\nTSLA: BUY skipped (1 share @ 362.34EUR > cash 153.15EUR)\nJPM: HOLD (deviation 0.0393 < 0.05)\nNVDA: HOLD (deviation 0.0089 < 0.05)\nJNJ: HOLD (deviation 0.0260 < 0.05)\nV: BUY skipped (1 share @ 392.09EUR > cash 153.15EUR)\nKO: HOLD (deviation 0.0037 < 0.05)\nULVR.L: HOLD (deviation 0.0136 < 0.05)\nHSBA.L: HOLD (deviation 0.0362 < 0.05)\nBP.L: HOLD (deviation 0.0460 < 0.05)\nGSK.L: HOLD (deviation 0.0079 < 0.05)\nRIO.L: HOLD (deviation 0.0290 < 0.05)\nENI.MI: HOLD (deviation 0.0018 < 0.05)\nISP.MI: HOLD (deviation 0.0206 < 0.05)\nENEL.MI: HOLD (deviation 0.0061 < 0.05)\nLDO.MI: HOLD (deviation 0.0027 < 0.05)\nMONC.MI: HOLD (deviation 0.0255 < 0.05)",
+      "fx_rates": {
+        "USD": 0.91116,
+        "EUR": 1.0,
+        "GBp": 0.01194
+      },
+      "stale_tickers": [],
+      "fees_eur": 0.4471
     }
   ]
 }
