@@ -3,7 +3,7 @@
   "metadata": {
     "initial_capital": 3000.0,
     "current_cash": 129.98,
-    "price_source": "investing.com(20/20)",
+    "price_source": "fallback",
     "fees_paid": 17.794
   },
   "current_positions": {
@@ -26415,6 +26415,84 @@
       },
       "stale_tickers": [],
       "fees_eur": 0.0
+    },
+    {
+      "timestamp": "2026-11-28T02:53:09.958722+00:00",
+      "session": "sera",
+      "total_value_eur": 3217.52,
+      "current_cash": 129.98,
+      "positions": {
+        "V": {
+          "shares": 1,
+          "avg_price": 288.7884
+        },
+        "GSK.L": {
+          "shares": 13,
+          "avg_price": 22.4515
+        },
+        "KO": {
+          "shares": 4,
+          "avg_price": 80.8036
+        },
+        "BP.L": {
+          "shares": 46,
+          "avg_price": 6.5515
+        },
+        "ENI.MI": {
+          "shares": 12,
+          "avg_price": 24.02
+        },
+        "JNJ": {
+          "shares": 1,
+          "avg_price": 235.1989
+        },
+        "TSLA": {
+          "shares": 1,
+          "avg_price": 365.9928
+        },
+        "AAPL": {
+          "shares": 1,
+          "avg_price": 321.9374
+        },
+        "ULVR.L": {
+          "shares": 3,
+          "avg_price": 59.7652
+        },
+        "ENEL.MI": {
+          "shares": 33,
+          "avg_price": 9.665
+        }
+      },
+      "prices_used": {},
+      "transactions": [],
+      "reasoning": "ATTENZIONE: tutti i prezzi sono fallback. Trading disabilitato, solo report.",
+      "fx_rates": {
+        "EUR": 1.0,
+        "USD": 0.91266,
+        "GBp": 0.011975
+      },
+      "stale_tickers": [
+        "AAPL",
+        "AMZN",
+        "BP.L",
+        "ENEL.MI",
+        "ENI.MI",
+        "GOOGL",
+        "GSK.L",
+        "HSBA.L",
+        "ISP.MI",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LDO.MI",
+        "MONC.MI",
+        "MSFT",
+        "NVDA",
+        "RIO.L",
+        "TSLA",
+        "ULVR.L",
+        "V"
+      ]
     }
   ]
 }
